@@ -59,7 +59,7 @@ class AuthController extends Controller
         $user = Auth::user();
 
         if ($user !== null && $user->isAdmin()) {
-            return route('admin.data.index');
+            return route('admin.home');
         }
 
         if (!$profileComplete) {

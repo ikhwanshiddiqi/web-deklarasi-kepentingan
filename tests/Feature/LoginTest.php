@@ -89,7 +89,7 @@ class LoginTest extends TestCase
         ]);
     }
 
-    public function test_admin_login_diarahkan_ke_admin_data_bukan_form_deklarasi(): void
+    public function test_admin_login_diarahkan_ke_beranda_admin(): void
     {
         $admin = $this->makeUser([
             'role' => 'admin',
@@ -103,7 +103,30 @@ class LoginTest extends TestCase
         ]);
 
         $this->assertAuthenticatedAs($admin);
-        $response->assertRedirect(route('admin.data.index'));
+        $response->assertRedirect(route('admin.home'));
+    }
+
+    public function test_chart_pengisian_hanya_muncul_di_beranda_admin(): void
+    {
+        $admin = $this->makeUser([
+            'role' => 'admin',
+            'email' => 'admin@sig.id',
+            'nik' => '1111111111111111',
+        ]);
+
+        $employee = $this->makeUser([
+            'role' => 'employee',
+            'email' => 'employee@sig.id',
+            'nik' => '2222222222222222',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.home'))
+            ->assertSee('Progres pengisian deklarasi');
+
+        $this->actingAs($employee)
+            ->get(route('home'))
+            ->assertDontSee('Progres pengisian deklarasi');
     }
 
     public function test_login_email_dinormalkan_huruf_besar_dan_spasi(): void

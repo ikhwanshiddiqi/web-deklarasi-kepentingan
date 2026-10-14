@@ -125,7 +125,7 @@
                             @endif
 
                             <a href="{{ route('account.settings') }}"
-                                class="nav-item {{ request()->routeIs('account.settings') ? 'active' : '' }}">
+                                class="nav-item {{ request()->routeIs('account.settings') ? 'active' : '' }}" hidden>
                                 <span class="nav-icon">
                                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path

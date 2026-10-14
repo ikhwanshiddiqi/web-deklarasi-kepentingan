@@ -13,17 +13,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
-/**
- * Pengelolaan akun oleh admin (Requirement 8).
- *
- * Lingkup controller ini TERBATAS pada melihat daftar akun dan mengubah status
- * aktif/nonaktif akun (Req 8.1). Controller ini TIDAK menyediakan jalur untuk
- * mengubah isi deklarasi (Req 8.2) — hanya status akun yang dikelola di sini.
- *
- * Akses dibatasi role `admin` melalui middleware `role:admin` di route (Req 8.3).
- *
- * Requirements: 8.1, 8.3
- */
 class UserController extends Controller
 {
     public function __construct(
@@ -55,13 +44,6 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Ubah status aktif/nonaktif sebuah akun.
-     *
-     * Hanya mengubah kolom `is_active` (status akun), bukan isi deklarasi
-     * (Req 8.2). Admin tidak boleh menonaktifkan akunnya sendiri agar tidak
-     * mengunci diri dari area admin.
-     */
     public function declarationsIndex(Request $request): View
     {
         $perPage = (int) $request->query('per_page', 10);
@@ -129,9 +111,6 @@ class UserController extends Controller
         $user->is_active = $isActive;
         $user->save();
 
-        // Catat perubahan status akun ke audit log (Req 7.1) tanpa data
-        // sensitif (Req 7.3). Lihat catatan Task 8.1: pencatatan ditambahkan di
-        // sini agar kode lebih bersih; Task 8.2 memverifikasinya.
         $this->auditService->log(
             AuditService::EVENT_ACCOUNT_STATUS_CHANGED,
             $user,
