@@ -16,10 +16,7 @@ Route::get('/', function () {
         return redirect()->route('home');
     }
 
-    return view('welcome', [
-        'user' => null,
-        'declaration' => null,
-    ]);
+    return redirect()->route('login');
 });
 
 Route::middleware(['auth', 'role:employee', 'no-cache'])->group(function () {

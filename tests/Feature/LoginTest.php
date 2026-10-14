@@ -46,6 +46,11 @@ class LoginTest extends TestCase
         ], $overrides));
     }
 
+    public function test_tamu_yang_mengakses_root_diarahkan_ke_login(): void
+    {
+        $this->get('/')->assertRedirect(route('login'));
+    }
+
     public function test_halaman_login_dapat_dibuka(): void
     {
         $this->get('/login')->assertOk();

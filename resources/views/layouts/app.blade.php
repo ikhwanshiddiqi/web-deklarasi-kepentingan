@@ -18,19 +18,25 @@
                 $existingDeclaration = $user?->latestDeclaration();
             @endphp
 
-            <div class="dashboard-layout sidebar-open">
-                <button type="button" class="mobile-sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="true">
+            {{-- Tanpa class "sidebar-open": di layar kecil sidebar mulai tertutup. --}}
+            <div class="dashboard-layout">
+                <button type="button" class="mobile-sidebar-toggle" aria-label="Buka sidebar" aria-controls="app-sidebar"
+                    aria-expanded="false">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8"
-                            stroke-linecap="round" />
+                        <path class="icon-open" d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" />
+                        <path class="icon-close" d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" />
                     </svg>
                 </button>
 
-                <aside class="app-sidebar">
+                <div class="sidebar-backdrop" aria-hidden="true"></div>
+
+                <aside class="app-sidebar" id="app-sidebar">
                     <div class="sidebar-inner">
                         <div class="brand-wrap">
                             <div class="brand-logo">
-                                <img src="../pict/logosp.png" alt="logo">
+                                <img src="{{ asset('pict/logosp.png') }}" alt="logo">
                             </div>
                             <div>
                                 <p class="brand-label">Portal</p>
@@ -189,14 +195,48 @@
         document.addEventListener('DOMContentLoaded', function() {
             const layout = document.querySelector('.dashboard-layout');
             const toggle = document.querySelector('.mobile-sidebar-toggle');
+            const backdrop = document.querySelector('.sidebar-backdrop');
 
             if (!layout || !toggle) {
                 return;
             }
 
+            const mobileQuery = window.matchMedia('(max-width: 900px)');
+
+            function setOpen(open) {
+                layout.classList.toggle('sidebar-open', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                toggle.setAttribute('aria-label', open ? 'Tutup sidebar' : 'Buka sidebar');
+            }
+
             toggle.addEventListener('click', function() {
-                const isOpen = layout.classList.toggle('sidebar-open');
-                toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                setOpen(!layout.classList.contains('sidebar-open'));
+            });
+
+            // Klik area gelap di luar sidebar = tutup
+            backdrop?.addEventListener('click', function() {
+                setOpen(false);
+            });
+
+            // Tombol Esc = tutup
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    setOpen(false);
+                }
+            });
+
+            // Pindah halaman lewat menu di layar kecil = tutup dulu
+            layout.querySelectorAll('.app-sidebar a').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (mobileQuery.matches) {
+                        setOpen(false);
+                    }
+                });
+            });
+
+            // Ganti ukuran layar (mis. rotasi/resize) = reset ke tertutup
+            mobileQuery.addEventListener('change', function() {
+                setOpen(false);
             });
         });
     </script>
