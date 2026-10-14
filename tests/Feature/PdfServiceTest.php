@@ -95,6 +95,50 @@ class PdfServiceTest extends TestCase
         $this->assertNull($declaration->fresh()->pdf_path);
     }
 
+    public function test_generate_cached_rebuilds_when_declaration_content_changes_even_if_timestamp_matches(): void
+    {
+        $user = $this->makeUser();
+        $this->completeProfileFor($user);
+
+        $time = now('Asia/Jakarta')->startOfSecond();
+
+        $declaration = $this->makeDeclaration($user, [
+            'updated_at' => $time,
+            'submitted_at' => $time,
+        ]);
+
+        $declaration->categories()->create(['category_key' => 'family_relationship']);
+        $declaration->details()->create([
+            'category_key' => 'family_relationship',
+            'related_party_name' => 'Andi',
+            'situation_explanation' => 'Versi lama',
+        ]);
+
+        $service = app(PdfService::class);
+        $first = $service->generateCached($declaration);
+
+        $declaration->forceFill([
+            'updated_at' => $time,
+            'submitted_at' => $time,
+            'declaration_status' => ConflictDeclaration::STATUS_HAS_CONFLICT,
+        ])->saveQuietly();
+
+        $declaration->categories()->delete();
+        $declaration->details()->delete();
+        $declaration->categories()->create(['category_key' => 'financial_interest']);
+        $declaration->details()->create([
+            'category_key' => 'financial_interest',
+            'related_party_name' => 'Budi',
+            'situation_explanation' => 'Versi baru setelah edit',
+        ]);
+
+        $second = $service->generateCached($declaration->fresh());
+
+        $this->assertNotSame($first, $second);
+        $this->assertStringStartsWith('%PDF-', $first);
+        $this->assertStringStartsWith('%PDF-', $second);
+    }
+
     public function test_store_does_not_create_pdf_file_and_keeps_pdf_path_null(): void
     {
         Storage::fake('local');
@@ -121,5 +165,30 @@ class PdfServiceTest extends TestCase
             0,
             AuditLog::where('event', AuditService::EVENT_PDF_GENERATED)->count(),
         );
+    }
+
+    public function test_download_response_uses_no_cache_headers_and_fresh_filename(): void
+    {
+        $user = $this->makeUser();
+        $this->completeProfileFor($user);
+
+        $declaration = $this->makeDeclaration($user, [
+            'updated_at' => now('Asia/Jakarta')->subMinute(),
+            'submitted_at' => now('Asia/Jakarta')->subMinute(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('declarations.pdf', $declaration));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $cacheControl = $response->headers->get('Cache-Control');
+        $this->assertIsString($cacheControl);
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('no-cache', $cacheControl);
+        $this->assertStringContainsString('must-revalidate', $cacheControl);
+        $this->assertStringContainsString('max-age=0', $cacheControl);
+        $response->assertHeader('Pragma', 'no-cache');
+        $response->assertHeader('Expires', '0');
+        $this->assertStringContainsString('deklarasi-' . $declaration->id . '-', $response->headers->get('content-disposition'));
     }
 }

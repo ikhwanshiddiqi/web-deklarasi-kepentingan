@@ -41,12 +41,12 @@ class PdfTemplateTest extends TestCase
 
         $declaration->setRelation(
             'categories',
-            collect($categoryKeys)->map(fn (string $key) => new ConflictDeclarationCategory(['category_key' => $key]))
+            collect($categoryKeys)->map(fn(string $key) => new ConflictDeclarationCategory(['category_key' => $key]))
         );
 
         $declaration->setRelation(
             'details',
-            collect($details)->map(fn (array $d) => new ConflictDeclarationDetail($d))
+            collect($details)->map(fn(array $d) => new ConflictDeclarationDetail($d))
         );
 
         return $declaration;
@@ -119,5 +119,27 @@ class PdfTemplateTest extends TestCase
         // Seluruh 5 kategori tetap tercetak (tidak dihapus walau tak dicentang).
         $this->assertStringContainsString('Hubungan keluarga', $html);
         $this->assertStringContainsString('Kepentingan finansial/investasi', $html);
+    }
+
+    public function test_render_memecah_tabel_ke_beberapa_halaman_dengan_header_ulang(): void
+    {
+        $details = [];
+        for ($i = 0; $i < 12; $i++) {
+            $details[] = [
+                'category_key' => 'family_relationship',
+                'related_party_name' => 'Pihak ' . ($i + 1),
+                'situation_explanation' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ' . ($i + 1),
+            ];
+        }
+
+        $declaration = $this->makeDeclaration(
+            ConflictDeclaration::STATUS_HAS_CONFLICT,
+            ['family_relationship'],
+            $details,
+        );
+
+        $html = $this->render($declaration);
+
+        $this->assertSame(2, substr_count($html, 'Kondisi yang dicentang'));
     }
 }

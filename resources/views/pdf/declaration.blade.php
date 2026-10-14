@@ -10,6 +10,7 @@
         ->all();
 
     $isChecked = static fn(string $key): bool => in_array($key, $checkedKeys, true);
+    $mark = static fn(bool $on): string => $on ? '[&nbsp;X&nbsp;]' : '[&nbsp;&nbsp;&nbsp;]';
 
     $details = collect($declaration->details ?? []);
 
@@ -17,55 +18,71 @@
         return $categoryMap[$key]['label'] ?? $key;
     };
 
-    $submittedAt = $declaration->submitted_at;
-    if ($submittedAt instanceof \Carbon\CarbonInterface) {
-        $tanggal = $submittedAt->copy()->timezone('Asia/Jakarta')->translatedFormat('d F Y');
-    } elseif (!empty($submittedAt)) {
-        $tanggal = \Illuminate\Support\Carbon::parse($submittedAt)->timezone('Asia/Jakarta')->translatedFormat('d F Y');
-    } else {
-        $tanggal = now('Asia/Jakarta')->translatedFormat('d F Y');
+    // Penjelasan: izinkan hanya tag teks dasar, buang semua atribut (style, class, dll).
+    // Kalau input aslinya teks biasa dari <textarea>, ganti dengan: nl2br(e($text))
+    $cleanHtml = static function (?string $html): string {
+        $html = strip_tags((string) $html, '<p><br><b><strong><i><em><u><ul><ol><li>');
+        return preg_replace('/<(\w+)\s+[^>]*>/', '<$1>', $html) ?? '';
+    };
+
+    // Ubah penjelasan jadi teks biasa lalu pecah per ~140 karakter (di batas kata) agar bisa
+    // berpindah halaman di tengah sel.
+    $explainChunks = static function (?string $html, int $size = 140): array {
+    $text = preg_replace('#<\s*(br|/p|/li)\s*/@endphp#i', "\n", (string) $html);
+    $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = trim(preg_replace("/\n{2,}/", "\n", str_replace("\r", '', $text)));
+    if ($text === '') {
+        return [''];
     }
+    $out = [];
+    foreach (explode("\n", $text) as $para) {
+        foreach (explode("\n", wordwrap($para, $size, "\n", true)) as $line) {
+            $out[] = $line;
+        }
+    }
+    // gabung baris pendek ke chunk ~$size karakter; paragraf baru tetap mulai baris baru
+    return $out;
+};
 
-    $approvedBy = $declaration->employee_name ?: '-';
+$submittedAt = $declaration->submitted_at;
+if ($submittedAt instanceof \Carbon\CarbonInterface) {
+    $tanggal = $submittedAt->copy()->timezone('Asia/Jakarta')->translatedFormat('d F Y');
+} elseif (!empty($submittedAt)) {
+    $tanggal = \Illuminate\Support\Carbon::parse($submittedAt)->timezone('Asia/Jakarta')->translatedFormat('d F Y');
+} else {
+    $tanggal = now('Asia/Jakarta')->translatedFormat('d F Y');
+}
 
-    $logoPath = public_path('pict/logosp.png');
-    $logoExists = is_file($logoPath);
-@endphp
+$approvedBy = $declaration->employee_name ?: '-';
+
+$logoPath = public_path('pict/logosp.png');
+$logoExists = is_file($logoPath);
+?>
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
     <meta charset="utf-8">
     <title>Pernyataan Potensi Benturan Kepentingan — FI/SP/GRC/973</title>
+    {{-- Hanya CSS yang didukung mPDF: tanpa @page, position:fixed, display:none, box-sizing, inline-block --}}
     <style>
-        /* A4, atas 2,5 cm | kanan 2 cm | bawah 2,5 cm | kiri 3 cm (lebih lebar dari DOCX asli: 2,5/1,5) */
-        @page {
-            size: A4 portrait;
-            margin: 2.5cm 2cm 2.5cm 3cm;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        /* Font dokumen asli: Arial 11 pt (Helvetica bawaan Dompdf = metrik sama dgn Arial) */
         body {
-            font-family: Arial, Helvetica, "DejaVu Sans", sans-serif;
+            font-family: freesans, sans-serif;
             font-size: 11pt;
             line-height: 1.1;
             color: #000;
-            margin: 0;
-            padding: 0;
         }
 
         p {
             margin: 0;
         }
 
-        /* ---------- Header (logo + judul) — di badan dokumen, bukan berulang ---------- */
+        table {
+            border-collapse: collapse;
+        }
+
         .doc-header {
             width: 100%;
-            border-collapse: collapse;
             margin-bottom: 8pt;
         }
 
@@ -75,170 +92,98 @@
         }
 
         .logo-cell {
-            width: 3.81cm;
-            text-align: left;
-        }
-
-        /* judul menjorok 2160 twips */
-        .logo-cell img {
-            width: 1.5cm;
-            height: auto;
-        }
-
-        .logo-fallback {
-            width: 1.5cm;
-            height: 1.9cm;
-            border: 1px dashed #999;
-            color: #999;
-            font-size: 7pt;
-            text-align: center;
-            line-height: 1.9cm;
+            width: 3.8cm;
         }
 
         .title-cell {
             font-size: 12pt;
             font-weight: bold;
-            color: #000;
-        }
-
-        /* ---------- Footer tetap tiap halaman (kode dokumen) ---------- */
-        .doc-footer {
-            position: fixed;
-            bottom: -1.25cm;
-            /* jarak footer 1,25 cm dari tepi kertas */
-            left: 0;
-            right: 0;
-            height: 1cm;
-            text-align: center;
-            font-size: 10pt;
-            line-height: 1.2;
-            color: #000;
-        }
-
-        /* ---------- Judul bagian ---------- */
-        .section {
-            margin-bottom: 0;
         }
 
         .section-title {
             font-size: 11pt;
             font-weight: bold;
             text-transform: uppercase;
-            padding-left: .5cm;
-            text-indent: -.5cm;
-            /* hanging 284 twips */
-            margin: 0 0 4pt 0;
+            margin: 8pt 0 4pt 0;
         }
 
         .star {
             color: #ff0000;
         }
 
-        /* ---------- A. Data Karyawan ---------- */
         .data-table {
-            border-collapse: collapse;
-            margin: 0 0 4pt .8cm;
-            width: 15.2cm;
+            width: 100%;
+            margin-bottom: 4pt;
         }
 
         .data-table td {
             padding: 2pt 4pt;
             vertical-align: top;
-            font-size: 11pt;
         }
 
         .data-table td.label {
-            width: 6.19cm;
+            width: 40%;
             font-weight: bold;
             background-color: #f2f2f2;
         }
 
         .data-table td.sep {
-            width: .16cm;
-            padding: 2pt 0;
+            width: 1%;
             background-color: #f2f2f2;
         }
 
         .data-table td.value {
-            width: 8.85cm;
-            background-color: #bfbfbf;
+            width: 59%;
+            background-color: #e3e3e3;
         }
 
-        /* ---------- B. Deklarasi ---------- */
-        .hint {
+        .hint,
+        .c-hint {
             font-style: italic;
             font-size: 9.5pt;
             text-align: justify;
             margin: 0 0 4pt 0;
         }
 
-        .intro {
-            text-align: justify;
-            margin: 0 0 2pt 0;
-        }
-
-        .box {
-            display: inline-block;
-            border: 1px solid #000;
-            width: 9pt;
-            height: 9pt;
-            line-height: 8pt;
-            text-align: center;
-            font-size: 8pt;
-            font-weight: bold;
-            margin-right: 3pt;
-            vertical-align: middle;
-        }
-
-        .cat-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0 0 5pt 0;
-        }
-
-        .cat-table td {
-            padding: 0 0 2pt 0;
-            vertical-align: top;
-        }
-
-        .cat-table td.cat-box {
-            width: .75cm;
-        }
-
-        /* hanging 426 twips */
-        .cat-table td.cat-text {
-            text-align: justify;
-        }
-
-        /* ---------- C. Tabel identifikasi ---------- */
-        .c-title {
-            margin-top: 0pt;
-        }
-
-        .c-hint {
-            font-style: italic;
-            font-size: 9.5pt;
-            text-align: justify;
-            margin: 0 0 3pt 0;
-        }
-
+        .intro,
         .c-intro {
             text-align: justify;
             margin: 0 0 4pt 0;
         }
 
-        .detail-table {
-            border-collapse: collapse;
+        .cat-table {
             width: 100%;
             margin-bottom: 5pt;
         }
 
+        .cat-table td {
+            padding: 0 0 3pt 0;
+            vertical-align: top;
+        }
+
+        .cat-table td.cat-box {
+            width: 1.3cm;
+            font-family: dejavusansmono, monospace;
+            font-size: 10pt;
+        }
+
+        .cat-table td.cat-text {
+            text-align: justify;
+        }
+
+        /* Lebar kolom mengikuti DOCX asli: 8/25/35/32 = 100% (c-expl disesuaikan 31→32) */
+        .detail-table {
+            width: 100%;
+            margin-bottom: 5pt;
+            overflow: wrap;
+        }
+
         .detail-table th,
         .detail-table td {
-            border: .5pt solid #000;
+            border: 0.5pt solid #000;
             padding: 3pt 5pt;
             vertical-align: top;
-            font-size: 11pt;
+            overflow: wrap;
         }
 
         .detail-table th {
@@ -246,45 +191,45 @@
             color: #fff;
             text-align: left;
             font-weight: normal;
-            height: 1.1cm;
-            padding-top: 4pt;
         }
 
-        .detail-table td.no,
-        .detail-table th.no {
-            width: 1.34cm;
+        .detail-table .c-no {
+            width: 8%;
             text-align: center;
         }
 
-        .detail-table td.cond,
-        .detail-table th.cond {
-            width: 4.13cm;
+        .detail-table .c-cond {
+            width: 25%;
         }
 
-        .detail-table td.party,
-        .detail-table th.party {
-            width: 5.82cm;
+        .detail-table .c-party {
+            width: 35%;
         }
 
-        .empty-row td {
-            height: .8cm;
+        .detail-table .c-expl {
+            width: 32%;
         }
 
-        /* ---------- Pernyataan + tanda tangan ---------- */
+        .detail-table ul,
+        .detail-table ol {
+            margin: 0;
+            padding-left: 14pt;
+        }
+
+        /* baris sambungan: tetap bergaris penuh, jadi akhir tiap halaman selalu tertutup garis */
+        .detail-table .g-first,
+        .detail-table .g-mid,
+        .detail-table .g-last {
+            padding-top: 1pt;
+            padding-bottom: 1pt;
+        }
+
         .statement {
             text-align: justify;
-            margin: 0 0 16pt 0;
+            margin: 6pt 0 14pt 0;
         }
 
-        /* Blok "Padang ... Nama" tidak boleh terpisah antar halaman */
         .signoff {
-            page-break-inside: avoid;
-        }
-
-        .signoff .line,
-        .signoff .approved-word,
-        .signoff .approved-note,
-        .signoff .name-line {
             page-break-inside: avoid;
         }
 
@@ -297,184 +242,162 @@
             font-weight: bold;
             letter-spacing: 1.5pt;
             color: #15803d;
-            margin: 2pt 0 1pt 0;
-        }
-
-        .approved-note {
-            font-size: 7.5pt;
-            color: #555;
-            font-style: italic;
-            line-height: 1.25;
-            margin: 0 0 6pt 0;
-            width: 8cm;
+            margin-top: 8pt;
         }
 
         .name-line {
-            margin-top: 2pt;
+            margin-top: 8pt;
         }
 
         .name-under {
             border-bottom: 1px solid #000;
-            display: inline-block;
-            min-width: 4.46cm;
         }
     </style>
 </head>
 
 <body>
 
-    {{-- Footer: kode dokumen --}}
-    <div class="doc-footer">
-        FI/SP/GRC/973<br>Rev. 01
-    </div>
+    {{-- Footer tiap halaman: cara mPDF yang benar (bukan position:fixed) --}}
+    <htmlpagefooter name="docfooter">
+        <div style="text-align:center; font-size:11pt; line-height:1.1;">FI/SP/GRC/973<br>Rev. 01</div>
+    </htmlpagefooter>
+    <sethtmlpagefooter name="docfooter" value="on" />
 
-    {{-- Header: logo + judul (halaman pertama) --}}
     <table class="doc-header">
         <tr>
             <td class="logo-cell">
                 @if ($logoExists)
-                    <img src="{{ $logoPath }}" alt="PT Semen Padang">
-                @else
-                    <div class="logo-fallback">LOGO</div>
+                    <img src="{{ $logoPath }}" alt="PT Semen Padang" style="width:1.5cm;">
                 @endif
             </td>
             <td class="title-cell">PERNYATAAN POTENSI BENTURAN KEPENTINGAN</td>
         </tr>
     </table>
 
-    {{-- ================= A. DATA KARYAWAN ================= --}}
-    <div class="section">
-        <div class="section-title">A.&nbsp; Data Karyawan</div>
-        <table class="data-table">
-            <tr>
-                <td class="label">Nama Lengkap</td>
-                <td class="sep">:</td>
-                <td class="value">{{ $declaration->employee_name ?: '' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Nomor Induk Pegawai (NIP/NIK)</td>
-                <td class="sep">:</td>
-                <td class="value">{{ $declaration->employee_nik ?: '' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Jabatan / Posisi</td>
-                <td class="sep">:</td>
-                <td class="value">{{ $declaration->employee_position ?: '' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Unit Kerja</td>
-                <td class="sep">:</td>
-                <td class="value">{{ $declaration->employee_work_unit ?: '' }}</td>
-            </tr>
-        </table>
-    </div>
+    {{-- A. DATA KARYAWAN --}}
+    <div class="section-title">A.&nbsp; Data Karyawan</div>
+    <table class="data-table">
+        <tr>
+            <td class="label">Nama Lengkap</td>
+            <td class="sep">:</td>
+            <td class="value">{{ $declaration->employee_name }}</td>
+        </tr>
+        <tr>
+            <td class="label">Nomor Induk Pegawai (NIP/NIK)</td>
+            <td class="sep">:</td>
+            <td class="value">{{ $declaration->employee_nik }}</td>
+        </tr>
+        <tr>
+            <td class="label">Jabatan / Posisi</td>
+            <td class="sep">:</td>
+            <td class="value">{{ $declaration->employee_position }}</td>
+        </tr>
+        <tr>
+            <td class="label">Unit Kerja</td>
+            <td class="sep">:</td>
+            <td class="value">{{ $declaration->employee_work_unit }}</td>
+        </tr>
+    </table>
 
-    {{-- ================= B. DEKLARASI BENTURAN KEPENTINGAN ================= --}}
-    <div class="section">
-        <div class="section-title">B.&nbsp; Deklarasi Benturan Kepentingan</div>
-        <p class="hint">
-            (Beri tanda centang [X] jika Anda memiliki kondisi dan keadaan yang berpotensi
-            menimbulkan benturan kepentingan sesuai situasi yang relevan dengan Anda)
-        </p>
+    {{-- B. DEKLARASI --}}
+    <div class="section-title">B.&nbsp; Deklarasi Benturan Kepentingan</div>
+    <p class="hint">
+        (Beri tanda centang [X] jika Anda memiliki kondisi dan keadaan yang berpotensi
+        menimbulkan benturan kepentingan sesuai situasi yang relevan dengan Anda)
+    </p>
 
-        {{-- Status: tidak memiliki / memiliki (selalu tampil; yang dipilih ditandai [X]) --}}
-        <p class="intro">
-            Dengan ini saya menyatakan bahwa saya
-            <span class="box">{{ !$hasConflict ? 'X' : '' }}</span><b>tidak memiliki</b>/
-            <span class="box">{{ $hasConflict ? 'X' : '' }}</span><b>memiliki</b>
-            kondisi yang berpotensi menimbulkan benturan kepentingan sebagai berikut:
-        </p>
+    <p class="intro">
+        Dengan ini saya menyatakan bahwa saya
+        <span style="font-family:dejavusansmono; font-size:10pt;">{!! $mark(!$hasConflict) !!}</span> <b>tidak memiliki</b> /
+        <span style="font-family:dejavusansmono; font-size:10pt;">{!! $mark($hasConflict) !!}</span> <b>memiliki</b>
+        kondisi yang berpotensi menimbulkan benturan kepentingan sebagai berikut:
+    </p>
 
-        {{-- 5 kategori — SEMUA selalu tampil; hanya yang dipilih ditandai [X] --}}
-        <table class="cat-table">
-            <tr>
-                <td class="cat-box"><span class="box">{{ $isChecked('family_relationship') ? 'X' : '' }}</span></td>
-                <td class="cat-text">
-                    <b>Hubungan keluarga</b>: Memiliki hubungan keluarga dengan Insan Perusahaan lainnya.
-                </td>
-            </tr>
-            <tr>
-                <td class="cat-box"><span class="box">{{ $isChecked('multiple_positions') ? 'X' : '' }}</span></td>
-                <td class="cat-text">
-                    <b>Perangkapan jabatan:</b> Merangkap jabatan pada perusahaan lain yang memiliki
-                    hubungan langsung/tidak langsung, sejenis/tidak sejenis, sehingga menyebabkan
-                    pemanfaatan suatu jabatan untuk jabatan lainnya yang memiliki hubungan dengan
-                    kegiatan bisnis perusahaan
-                </td>
-            </tr>
-            <tr>
-                <td class="cat-box"><span class="box">{{ $isChecked('hr_process') ? 'X' : '' }}</span></td>
-                <td class="cat-text">
-                    <b>Proses SDM:</b> Terlibat dalam pengambilan keputusan terkait rekrutmen,
-                    penilaian kinerja, atau promosi pihak yang memiliki hubungan Afiliasi.
-                </td>
-            </tr>
-            <tr>
-                <td class="cat-box"><span class="box">{{ $isChecked('procurement_finance') ? 'X' : '' }}</span></td>
-                <td class="cat-text">
-                    <b>Pengadaan &amp; Keuangan:</b> Terlibat dalam proses seleksi vendor atau
-                    persetujuan transaksi keuangan dengan pihak yang memiliki hubungan Afiliasi.
-                </td>
-            </tr>
-            <tr>
-                <td class="cat-box"><span class="box">{{ $isChecked('financial_interest') ? 'X' : '' }}</span></td>
-                <td class="cat-text">
-                    <b>Kepentingan finansial/investasi:</b> Memiliki saham, investasi, atau keuntungan
-                    finansial pada Perusahaan pihak ketiga yang menjadi vendor, mitra bisnis, atau
-                    pesaing PT Semen Padang.
-                </td>
-            </tr>
-        </table>
-    </div>
+    <table class="cat-table">
+        <tr>
+            <td class="cat-box">{!! $mark($isChecked('family_relationship')) !!}</td>
+            <td class="cat-text"><b>Hubungan keluarga</b>: Memiliki hubungan keluarga dengan Insan Perusahaan lainnya.
+            </td>
+        </tr>
+        <tr>
+            <td class="cat-box">{!! $mark($isChecked('multiple_positions')) !!}</td>
+            <td class="cat-text"><b>Perangkapan jabatan:</b> Merangkap jabatan pada perusahaan lain yang memiliki
+                hubungan langsung/tidak langsung, sejenis/tidak sejenis, sehingga menyebabkan
+                pemanfaatan suatu jabatan untuk jabatan lainnya yang memiliki hubungan dengan
+                kegiatan bisnis perusahaan</td>
+        </tr>
+        <tr>
+            <td class="cat-box">{!! $mark($isChecked('hr_process')) !!}</td>
+            <td class="cat-text"><b>Proses SDM:</b> Terlibat dalam pengambilan keputusan terkait rekrutmen,
+                penilaian kinerja, atau promosi pihak yang memiliki hubungan Afiliasi.</td>
+        </tr>
+        <tr>
+            <td class="cat-box">{!! $mark($isChecked('procurement_finance')) !!}</td>
+            <td class="cat-text"><b>Pengadaan &amp; Keuangan:</b> Terlibat dalam proses seleksi vendor atau
+                persetujuan transaksi keuangan dengan pihak yang memiliki hubungan Afiliasi.</td>
+        </tr>
+        <tr>
+            <td class="cat-box">{!! $mark($isChecked('financial_interest')) !!}</td>
+            <td class="cat-text"><b>Kepentingan finansial/investasi:</b> Memiliki saham, investasi, atau keuntungan
+                finansial pada Perusahaan pihak ketiga yang menjadi vendor, mitra bisnis, atau
+                pesaing PT Semen Padang.</td>
+        </tr>
+    </table>
 
-    {{-- ================= C. TABEL IDENTIFIKASI ================= --}}
-    <div class="section">
-        <div class="section-title c-title">
-            C.&nbsp; Tabel Identifikasi dan Deklarasi Benturan Kepentingan<span class="star">*</span>
-        </div>
-        <p class="c-hint">
-            (<span class="star">*</span>diisi jika sedang/telah terjadi Benturan Kepentingan)
-        </p>
-        <p class="c-intro">
-            Isikan penjelasan atas benturan kepentingan pada kolom berikut jika Bapak/Ibu mencentang
-            salah satu poin kondisi pada bagian B di atas:
-        </p>
+    {{-- C. TABEL IDENTIFIKASI --}}
+    <div class="section-title">C.&nbsp; Tabel Identifikasi dan Deklarasi Benturan Kepentingan<span
+            class="star">*</span></div>
+    <p class="c-hint">(<span class="star">*</span>diisi jika sedang/telah terjadi Benturan Kepentingan)</p>
+    <p class="c-intro">
+        Isikan penjelasan atas benturan kepentingan pada kolom berikut jika Bapak/Ibu mencentang
+        salah satu poin kondisi pada bagian B di atas:
+    </p>
 
-        <table class="detail-table">
-            <thead>
-                <tr>
-                    <th class="no">No.</th>
-                    <th class="cond">Kondisi yang dicentang</th>
-                    <th class="party">Nama Pihak Terkait/ Perusahaan terafiliasi</th>
-                    <th>Penjelasan situasi /Hubungan terkait</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($details as $i => $detail)
+    <table class="detail-table" repeat_header="1">
+        <thead>
+            <tr>
+                <th class="c-no">No.</th>
+                <th class="c-cond">Kondisi yang dicentang</th>
+                <th class="c-party">Nama Pihak Terkait / Perusahaan terafiliasi</th>
+                <th class="c-expl">Penjelasan situasi / Hubungan terkait</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($details as $index => $detail)
+                @php
+                    $detailKey = is_array($detail) ? $detail['category_key'] ?? '' : $detail->category_key ?? '';
+                    $party = is_array($detail)
+                        ? $detail['related_party_name'] ?? ''
+                        : $detail->related_party_name ?? '';
+                    $explain = is_array($detail)
+                        ? $detail['situation_explanation'] ?? ''
+                        : $detail->situation_explanation ?? '';
+                    $chunks = $explainChunks($explain);
+                    $last = count($chunks) - 1;
+                @endphp
+                {{-- mPDF tidak memotong satu <tr> antar halaman, jadi penjelasan panjang dipecah jadi beberapa baris
+                     masing-masing bergaris penuh supaya baris terakhir di tiap halaman tetap tertutup garis. --}}
+                @foreach ($chunks as $i => $chunk)
                     @php
-                        $detailKey = is_array($detail) ? $detail['category_key'] ?? '' : $detail->category_key;
-                        $party = is_array($detail) ? $detail['related_party_name'] ?? '' : $detail->related_party_name;
-                        $explain = is_array($detail)
-                            ? $detail['situation_explanation'] ?? ''
-                            : $detail->situation_explanation;
+                        $pos = $last === 0 ? '' : ($i === 0 ? 'g-first' : ($i === $last ? 'g-last' : 'g-mid'));
                     @endphp
                     <tr>
-                        <td class="no">{{ $i + 1 }}</td>
-                        <td class="cond">{{ $labelFor($detailKey) }}</td>
-                        <td class="party">{{ $party }}</td>
-                        <td>{{ $explain }}</td>
+                        <td class="c-no {{ $pos }}">{!! $i === 0 ? $index + 1 : '&nbsp;' !!}</td>
+                        <td class="c-cond {{ $pos }}">{!! $i === 0 ? e($labelFor($detailKey)) : '&nbsp;' !!}</td>
+                        <td class="c-party {{ $pos }}">{!! $i === 0 ? e($party) : '&nbsp;' !!}</td>
+                        <td class="c-expl {{ $pos }}">{!! e($chunk) !!}</td>
                     </tr>
-                @empty
-                    <tr class="empty-row">
-                        <td class="no"></td>
-                        <td class="cond"></td>
-                        <td class="party"></td>
-                        <td></td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                @endforeach
+            @empty
+                <tr>
+                    <td class="c-no">&nbsp;</td>
+                    <td class="c-cond">&nbsp;</td>
+                    <td class="c-party">&nbsp;</td>
+                    <td class="c-expl">&nbsp;</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
 
     <p class="statement">
         Saya menyatakan bahwa seluruh informasi ini adalah benar dan lengkap sesuai dengan kondisi
@@ -484,14 +407,7 @@
     <div class="signoff">
         <p class="line">Padang, {{ $tanggal }}</p>
         <p class="line">Dibuat oleh,</p>
-
-        {{-- Area tanda tangan diganti penanda sistem APPROVED (hijau). --}}
         <div class="approved-word">APPROVED</div>
-        <div class="approved-note">
-            Penanda sistem bahwa formulir telah dikirim/dibuat melalui portal. Bukan tanda tangan
-            elektronik tersertifikasi.
-        </div>
-
         <p class="name-line"><span class="name-under">{{ $approvedBy }}</span></p>
     </div>
 

@@ -183,6 +183,41 @@ class StoreDeclarationRequestTest extends TestCase
         $this->assertArrayHasKey('details.0.situation_explanation', $validator->errors()->toArray());
     }
 
+    public function test_has_conflict_rincian_dengan_daftar_html_lolos(): void
+    {
+        $validator = $this->validatorFor([
+            'declaration_status' => ConflictDeclaration::STATUS_HAS_CONFLICT,
+            'categories' => ['family_relationship'],
+            'details' => [
+                [
+                    'category_key' => 'family_relationship',
+                    'related_party_name' => 'Andi',
+                    'situation_explanation' => '<ol><li>Saudara kandung dari pihak lain</li><li>Berada di unit kerja yang sama</li></ol>',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($validator->passes());
+    }
+
+    public function test_has_conflict_rincian_dengan_html_kosong_ditolak(): void
+    {
+        $validator = $this->validatorFor([
+            'declaration_status' => ConflictDeclaration::STATUS_HAS_CONFLICT,
+            'categories' => ['family_relationship'],
+            'details' => [
+                [
+                    'category_key' => 'family_relationship',
+                    'related_party_name' => 'Andi',
+                    'situation_explanation' => '<p><br></p>',
+                ],
+            ],
+        ]);
+
+        $this->assertFalse($validator->passes());
+        $this->assertArrayHasKey('details.0.situation_explanation', $validator->errors()->toArray());
+    }
+
     public function test_status_tidak_valid_ditolak(): void
     {
         $validator = $this->validatorFor([

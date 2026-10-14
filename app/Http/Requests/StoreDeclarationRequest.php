@@ -165,6 +165,7 @@ class StoreDeclarationRequest extends FormRequest
             $categoryKey = trim((string) ($detail['category_key'] ?? ''));
             $partyName = trim((string) ($detail['related_party_name'] ?? ''));
             $explanation = trim((string) ($detail['situation_explanation'] ?? ''));
+            $plainExplanation = $this->plainTextFromRichText($explanation);
 
             // Kategori rincian wajib diisi dan harus merupakan subset kategori
             // yang dicentang di Bagian B (Req 4.9).
@@ -189,7 +190,7 @@ class StoreDeclarationRequest extends FormRequest
             }
 
             // Req 4.10 — penjelasan situasi wajib diisi.
-            if ($explanation === '') {
+            if ($plainExplanation === '') {
                 $validator->errors()->add(
                     "details.{$index}.situation_explanation",
                     'Penjelasan Situasi wajib diisi.'
@@ -209,8 +210,8 @@ class StoreDeclarationRequest extends FormRequest
         $categories = is_array($categories) ? $categories : [];
 
         return array_values(array_filter(
-            array_map(static fn ($value): string => trim((string) $value), $categories),
-            static fn (string $value): bool => $value !== ''
+            array_map(static fn($value): string => trim((string) $value), $categories),
+            static fn(string $value): bool => $value !== ''
         ));
     }
 
@@ -231,7 +232,7 @@ class StoreDeclarationRequest extends FormRequest
             $partyName = trim((string) ($detail['related_party_name'] ?? ''));
             $explanation = trim((string) ($detail['situation_explanation'] ?? ''));
 
-            if ($categoryKey !== '' || $partyName !== '' || $explanation !== '') {
+            if ($categoryKey !== '' || $partyName !== '' || $this->plainTextFromRichText($explanation) !== '') {
                 return true;
             }
         }
@@ -273,9 +274,9 @@ class StoreDeclarationRequest extends FormRequest
 
             $categoryKey = trim((string) ($detail['category_key'] ?? ''));
             $partyName = trim((string) ($detail['related_party_name'] ?? ''));
-            $explanation = trim((string) ($detail['situation_explanation'] ?? ''));
+            $explanation = $this->sanitizeRichText((string) ($detail['situation_explanation'] ?? ''));
 
-            if ($categoryKey === '' && $partyName === '' && $explanation === '') {
+            if ($categoryKey === '' && $partyName === '' && $this->plainTextFromRichText($explanation) === '') {
                 continue;
             }
 
@@ -291,6 +292,20 @@ class StoreDeclarationRequest extends FormRequest
             'categories' => $this->normalizedCategories(),
             'details' => $normalizedDetails,
         ];
+    }
+
+    protected function plainTextFromRichText(string $value): string
+    {
+        $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $plain = strip_tags($decoded);
+        $plain = preg_replace('/\s+/u', ' ', $plain) ?? '';
+
+        return trim($plain);
+    }
+
+    protected function sanitizeRichText(string $value): string
+    {
+        return trim((string) strip_tags($value, '<p><br><ol><ul><li><strong><em><u><s><span><blockquote><a>'));
     }
 
     /**

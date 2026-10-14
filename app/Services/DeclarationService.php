@@ -57,7 +57,7 @@ class DeclarationService
                     $declaration->details()->create([
                         'category_key' => (string) ($detail['category_key'] ?? ''),
                         'related_party_name' => (string) ($detail['related_party_name'] ?? ''),
-                        'situation_explanation' => (string) ($detail['situation_explanation'] ?? ''),
+                        'situation_explanation' => $this->sanitizeRichText((string) ($detail['situation_explanation'] ?? '')),
                     ]);
                 }
             }
@@ -103,13 +103,18 @@ class DeclarationService
                     $declaration->details()->create([
                         'category_key' => (string) ($detail['category_key'] ?? ''),
                         'related_party_name' => (string) ($detail['related_party_name'] ?? ''),
-                        'situation_explanation' => (string) ($detail['situation_explanation'] ?? ''),
+                        'situation_explanation' => $this->sanitizeRichText((string) ($detail['situation_explanation'] ?? '')),
                     ]);
                 }
             }
 
             return $declaration->fresh()->load(['categories', 'details']);
         });
+    }
+
+    private function sanitizeRichText(string $value): string
+    {
+        return trim((string) strip_tags($value, '<p><br><ol><ul><li><strong><em><u><s><span><blockquote><a>'));
     }
 
     private function uniqueCategories(array $categories): array

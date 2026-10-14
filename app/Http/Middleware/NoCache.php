@@ -16,7 +16,7 @@ class NoCache
 
         $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, private');
         $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', 'Sun, 02 Jan 1990 00:00:00 GMT');
+        $response->headers->set('Expires', '0');
 
         return $response;
     }

@@ -3,6 +3,38 @@
 @section('title', 'Isi Form Deklarasi — Portal Pernyataan Potensi Benturan Kepentingan')
 
 @section('content')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
+    <style>
+        .quill-editor {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .quill-editor .ql-toolbar {
+            border: 0;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .quill-editor .ql-container {
+            border: 0;
+            min-height: 110px;
+            font-size: 0.875rem;
+        }
+
+        .quill-editor .ql-editor {
+            min-height: 110px;
+            line-height: 1.5;
+        }
+
+        .quill-editor .ql-editor.ql-blank::before {
+            color: #9ca3af;
+            font-style: normal;
+        }
+    </style>
+
     <div class="mx-auto w-full max-w-4xl" x-data="declarationForm({
         status: @js(old('declaration_status', $declaration?->declaration_status ?? '')),
         categories: @js(old('categories', $declaration?->categories->pluck('category_key')->all() ?? [])),
@@ -181,64 +213,23 @@
                     Belum ada rincian. Klik <span class="font-medium">Tambah Rincian</span> untuk menambahkan.
                 </p>
 
-                <div class="mt-5 hidden overflow-x-auto sm:block" x-show="details.length > 0">
-                    <table class="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead>
-                            <tr class="text-left text-gray-600">
-                                <th class="w-12 py-2 pr-3 font-medium">No.</th>
-                                <th class="py-2 pr-3 font-medium">Kondisi</th>
-                                <th class="py-2 pr-3 font-medium">Nama Pihak Terkait</th>
-                                <th class="py-2 pr-3 font-medium">Penjelasan Situasi</th>
-                                <th class="w-16 py-2 font-medium"><span class="sr-only">Aksi</span></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <template x-for="(detail, index) in details" :key="detail._uid">
-                                <tr class="align-top">
-                                    <td class="py-3 pr-3 text-gray-700" x-text="index + 1"></td>
-                                    <td class="py-3 pr-3">
-                                        <select :name="`details[${index}][category_key]`" x-model="detail.category_key"
-                                            class="block w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                            <option value="">— Pilih kondisi —</option>
-                                            <template x-for="key in categories" :key="key">
-                                                <option :value="key" x-text="categoryLabel(key)"></option>
-                                            </template>
-                                        </select>
-                                    </td>
-                                    <td class="py-3 pr-3">
-                                        <input type="text" :name="`details[${index}][related_party_name]`"
-                                            x-model="detail.related_party_name"
-                                            class="block w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                    </td>
-                                    <td class="py-3 pr-3">
-                                        <textarea rows="2" :name="`details[${index}][situation_explanation]`" x-model="detail.situation_explanation"
-                                            class="block w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
-                                    </td>
-                                    <td class="py-3">
-                                        <button type="button" @click="removeDetail(index)"
-                                            class="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500">
-                                            Hapus
-                                        </button>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-5 space-y-4 sm:hidden" x-show="details.length > 0">
+                <div class="mt-5 space-y-4" x-show="details.length > 0">
                     <template x-for="(detail, index) in details" :key="detail._uid">
-                        <div class="rounded-lg border border-gray-200 p-4">
-                            <div class="mb-3 flex items-center justify-between">
-                                <span class="text-sm font-semibold text-gray-700">
-                                    Rincian <span x-text="index + 1"></span>
-                                </span>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                            <div class="mb-4 flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
+                                        x-text="index + 1"></span>
+                                    <span class="text-sm font-semibold text-gray-700">Rincian</span>
+                                </div>
                                 <button type="button" @click="removeDetail(index)"
                                     class="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50">
                                     Hapus
                                 </button>
                             </div>
-                            <div class="space-y-3">
+
+                            <div class="space-y-4">
                                 <div>
                                     <label class="mb-1 block text-xs font-medium text-gray-600">Kondisi</label>
                                     <select :name="`details[${index}][category_key]`" x-model="detail.category_key"
@@ -249,16 +240,18 @@
                                         </template>
                                     </select>
                                 </div>
+
                                 <div>
                                     <label class="mb-1 block text-xs font-medium text-gray-600">Nama Pihak Terkait</label>
                                     <input type="text" :name="`details[${index}][related_party_name]`"
                                         x-model="detail.related_party_name"
                                         class="block w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 </div>
+
                                 <div>
                                     <label class="mb-1 block text-xs font-medium text-gray-600">Penjelasan Situasi</label>
-                                    <textarea rows="3" :name="`details[${index}][situation_explanation]`" x-model="detail.situation_explanation"
-                                        class="block w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                                    <textarea :name="`details[${index}][situation_explanation]`" x-model="detail.situation_explanation" class="hidden"></textarea>
+                                    <div class="quill-editor" x-init="initQuill($el, $el.previousElementSibling, detail)"></div>
                                 </div>
                             </div>
                         </div>
@@ -323,8 +316,7 @@
 
                 init() {
                     const old = initial.details && typeof initial.details === 'object' ?
-                        Object.values(initial.details) :
-                        [];
+                        Object.values(initial.details) : [];
                     this.details = old.map((d) => ({
                         _uid: this._uidCounter++,
                         category_key: d.category_key ?? '',
@@ -382,10 +374,50 @@
                     });
                 },
 
+                initQuill(editorElement, hiddenField, detail) {
+                    if (!hiddenField) {
+                        return;
+                    }
+
+                    if (typeof Quill === 'undefined') {
+                        hiddenField.classList.remove('hidden');
+                        return;
+                    }
+
+                    const editor = new Quill(editorElement, {
+                        theme: 'snow',
+                        modules: {
+                            toolbar: [
+                                ['bold', 'italic', 'underline'],
+                                [{
+                                    list: 'ordered'
+                                }, {
+                                    list: 'bullet'
+                                }],
+                                ['clean'],
+                            ],
+                        },
+                    });
+
+                    const initialHtml = detail.situation_explanation || '';
+                    if (initialHtml.trim() !== '') {
+                        editor.clipboard.dangerouslyPasteHTML(initialHtml);
+                    } else {
+                        editor.root.innerHTML = '<p><br></p>';
+                    }
+
+                    editor.on('text-change', () => {
+                        const html = editor.root.innerHTML.trim() === '<p><br></p>' ? '' : editor.root.innerHTML;
+                        hiddenField.value = html;
+                        detail.situation_explanation = html;
+                    });
+                },
+
                 removeDetail(index) {
                     this.details.splice(index, 1);
                 },
             };
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.min.js"></script>
 @endsection

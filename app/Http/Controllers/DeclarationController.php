@@ -128,7 +128,8 @@ class DeclarationController extends Controller
     {
         $this->authorize('view', $declaration);
 
-        $filename = 'deklarasi-' . $declaration->id . '.pdf';
+        $version = $declaration->updated_at?->timestamp ?? $declaration->id;
+        $filename = 'deklarasi-' . $declaration->id . '-' . $version . '.pdf';
         $contents = $this->pdf->generateCached($declaration, 900);
 
         $this->audit->log(
@@ -140,15 +141,17 @@ class DeclarationController extends Controller
         return response($contents, 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="' . $filename . '"')
-            ->header('Cache-Control', 'private, must-revalidate, max-age=0')
-            ->header('Pragma', 'public');
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, private')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function pdf(Request $request, ConflictDeclaration $declaration): StreamedResponse
     {
         $this->authorize('download', $declaration);
 
-        $filename = 'deklarasi-' . $declaration->id . '.pdf';
+        $version = $declaration->updated_at?->timestamp ?? $declaration->id;
+        $filename = 'deklarasi-' . $declaration->id . '-' . $version . '.pdf';
         $contents = $this->pdf->generateCached($declaration, 900);
 
         $this->audit->log(
@@ -167,6 +170,9 @@ class DeclarationController extends Controller
             echo $contents;
         }, $filename, [
             'Content-Type' => 'application/pdf',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0, private',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ]);
     }
 }
