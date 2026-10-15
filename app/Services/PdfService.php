@@ -6,6 +6,7 @@ use App\Models\ConflictDeclaration;
 use Illuminate\Support\Facades\Cache;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
+use App\Services\RichTextService;
 
 /**
  * Layanan pembuatan PDF deklarasi benturan kepentingan.
@@ -26,18 +27,44 @@ class PdfService
     public const DIRECTORY = 'declarations';
 
     /**
-     * Render PDF sekaligus menampilkannya ke browser tanpa menyimpan ke disk.
+     * Render PDF (bytes) tanpa menyimpan ke disk.
      *
-     * @return string bytes PDF.
+     * Baris tabel C yang panjang dipecah menjadi beberapa potongan agar bisa pindah halaman.
+     * Supaya akhir tiap halaman tetap bergaris penutup, PDF dirender dua kali bila perlu:
+     * pass 1 mengukur potongan mana yang jatuh di akhir halaman, pass 2 menggambar garisnya.
      */
     public function generate(ConflictDeclaration $declaration): string
     {
         $declaration->loadMissing(['categories', 'details']);
 
+        $data = ['pageEnds' => [], 'measure' => false, 'fallbackBorders' => false];
+
+        if ($this->hasSplitRows($declaration)) {
+            $ends = $this->detectPageEnds($declaration);
+            if ($ends === null) {
+                // Pengukuran tidak tersedia: beri garis di semua potongan (aman, hanya kurang rapi).
+                $data['fallbackBorders'] = true;
+            } else {
+                $data['pageEnds'] = $ends;
+            }
+        }
+
+        $pdf = $this->render($declaration, $data);
+
+        // Pengaman: PDF yang jelas rusak tidak boleh dikirim / di-cache.
+        if ($pdf->page > 20) {
+            throw new \RuntimeException("PDF deklarasi {$declaration->id} berlebihan: {$pdf->page} halaman");
+        }
+
+        return $pdf->Output('', Destination::STRING_RETURN);
+    }
+
+    private function render(ConflictDeclaration $declaration, array $data): Mpdf
+    {
         $html = view('pdf.declaration', [
             'declaration' => $declaration,
             'categories' => config('conflict_categories', []),
-        ])->render();
+        ] + $data)->render();
 
         $tempDirectory = storage_path('framework/cache/mpdf');
         if (! is_dir($tempDirectory)) {
@@ -47,7 +74,7 @@ class PdfService
         $pdf = new Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4',
-            'default_font' => 'freeserif',
+            'default_font' => 'freesans',
             'default_font_size' => 11,
             'margin_top' => 25,
             'margin_bottom' => 25,
@@ -59,7 +86,61 @@ class PdfService
 
         $pdf->WriteHTML($html);
 
-        return $pdf->Output('', Destination::STRING_RETURN);
+        return $pdf;
+    }
+
+    /** Ada penjelasan yang terpecah jadi >1 potongan baris? (aturan sama dengan template) */
+    private function hasSplitRows(ConflictDeclaration $declaration): bool
+    {
+        foreach ($declaration->details as $detail) {
+            $lines = RichTextService::toLines($detail->situation_explanation ?? '');
+            if (count($lines) > 1 || (isset($lines[0]) && mb_strlen($lines[0]) > 140)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Pass 1: render dengan <bookmark> di tiap potongan, baca halaman masing-masing dari
+     * $pdf->BMoutlines. Mengembalikan id potongan (c1, c2, ...) yang menjadi baris terakhir
+     * di halamannya, atau null kalau data halaman tidak bisa dibaca.
+     *
+     * @return list<string>|null
+     */
+    private function detectPageEnds(ConflictDeclaration $declaration): ?array
+    {
+        try {
+            $pdf = $this->render($declaration, ['pageEnds' => [], 'measure' => true, 'fallbackBorders' => false]);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $pages = [];
+        foreach ((array) ($pdf->BMoutlines ?? []) as $outline) {
+            $id = $outline['t'] ?? null;
+            $page = $outline['p'] ?? null;
+            if (is_string($id) && preg_match('/^c(\d+)$/', $id, $m) && is_numeric($page)) {
+                $pages[(int) $m[1]] = (int) $page;
+            }
+        }
+
+        if ($pages === []) {
+            return null;
+        }
+
+        ksort($pages);
+        $numbers = array_keys($pages);
+        $ends = [];
+        foreach ($numbers as $i => $n) {
+            $next = $numbers[$i + 1] ?? null;
+            if ($next !== null && $pages[$next] > $pages[$n]) {
+                $ends[] = 'c' . $n;
+            }
+        }
+
+        return $ends;
     }
 
     /**

@@ -73,14 +73,8 @@ Route::middleware(['auth', 'role:employee', 'profile.complete', 'no-cache'])->gr
     Route::get('/declarations/create', [DeclarationController::class, 'create'])
         ->name('declarations.create');
 
-    Route::get('/declarations/{declaration}/edit', [DeclarationController::class, 'edit'])
-        ->name('declarations.edit');
-
     Route::post('/declarations', [DeclarationController::class, 'store'])
         ->name('declarations.store');
-
-    Route::put('/declarations/{declaration}', [DeclarationController::class, 'update'])
-        ->name('declarations.update');
 });
 
 Route::middleware(['auth', 'no-cache'])->group(function () {
@@ -95,6 +89,12 @@ Route::middleware(['auth', 'no-cache'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:admin', 'no-cache'])->group(function () {
+    Route::get('/declarations/{declaration}/edit', [DeclarationController::class, 'edit'])
+        ->name('declarations.edit');
+
+    Route::put('/declarations/{declaration}', [DeclarationController::class, 'update'])
+        ->name('declarations.update');
+
     Route::get('/admin', function () {
         return view('admin.home');
     })->name('admin.home');

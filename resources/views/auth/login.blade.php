@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Masuk — Portal Pernyataan Potensi Benturan Kepentingan')
+@section('title', 'Masuk')
 
 @section('content')
     <div class="flex min-h-[70vh] items-center justify-center">
@@ -65,7 +65,7 @@
                     </button>
                 </form>
 
-                <p class="mt-6 text-center text-sm text-gray-600">
+                <p class="mt-6 text-center text-sm text-gray-600" hidden>
                     Belum punya akun?
                     <a href="{{ route('register') }}" class="font-medium text-blue-600 hover:text-blue-700">
                         Buat akun

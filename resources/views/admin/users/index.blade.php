@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola Akun — Admin')
+@section('title', 'Kelola Akun')
 
 @section('content')
     <div class="mb-6">

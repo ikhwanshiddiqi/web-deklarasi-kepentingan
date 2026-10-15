@@ -38,11 +38,11 @@ class DeclarationPolicy
     }
 
     /**
-     * Boleh memperbarui jawaban deklarasi milik sendiri.
+     * Hanya admin yang boleh memperbarui jawaban deklarasi.
      */
     public function update(User $user, ConflictDeclaration $declaration): bool
     {
-        return $this->ownsOrAdmin($user, $declaration);
+        return $user->isAdmin();
     }
 
     /**

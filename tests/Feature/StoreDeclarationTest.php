@@ -132,7 +132,90 @@ class StoreDeclarationTest extends TestCase
         $response->assertSessionHas('warning');
     }
 
-    public function test_employee_can_edit_existing_declaration(): void
+    public function test_admin_edit_page_shows_original_employee_profile_not_logged_in_admin(): void
+    {
+        $admin = $this->makeUser([
+            'role' => 'admin',
+            'email' => 'admin@sig.id',
+            'nik' => '1111111111111111',
+        ]);
+        $this->completeProfileFor($admin, [
+            'full_name' => 'Admin Utama',
+            'position' => 'Supervisor',
+            'work_unit' => 'Direktorat Internal',
+        ]);
+
+        $employee = $this->makeUser([
+            'email' => 'employee@sig.id',
+            'nik' => '2222222222222222',
+        ]);
+        $this->completeProfileFor($employee, [
+            'full_name' => 'Budi Santoso',
+            'position' => 'Analis GRC',
+            'work_unit' => 'Unit Tata Kelola',
+        ]);
+
+        $declaration = $employee->declarations()->create([
+            'employee_name' => 'Budi Santoso',
+            'employee_nik' => $employee->nik,
+            'employee_position' => 'Analis GRC',
+            'employee_work_unit' => 'Unit Tata Kelola',
+            'declaration_status' => ConflictDeclaration::STATUS_NONE,
+            'approved_label' => DeclarationService::APPROVED_LABEL,
+            'submitted_at' => now('Asia/Jakarta'),
+            'pdf_path' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('declarations.edit', $declaration));
+
+        $response->assertOk();
+
+        $content = $response->getContent();
+        $this->assertMatchesRegularExpression(
+            '/data-field="employee_name"[^>]*>\s*Budi Santoso\s*<\/dd>/s',
+            $content,
+        );
+        $this->assertMatchesRegularExpression(
+            '/data-field="employee_nik"[^>]*>\s*2222222222222222\s*<\/dd>/s',
+            $content,
+        );
+    }
+
+    public function test_admin_can_edit_existing_declaration(): void
+    {
+        $admin = $this->makeUser(['role' => 'admin']);
+        $employee = $this->makeUser(['email' => 'employee@sig.id', 'nik' => '2222222222222222']);
+        $this->completeProfileFor($employee);
+
+        $declaration = $employee->declarations()->create([
+            'employee_name' => 'Budi Santoso',
+            'employee_nik' => $employee->nik,
+            'employee_position' => 'Analis GRC',
+            'employee_work_unit' => 'Unit Tata Kelola',
+            'declaration_status' => ConflictDeclaration::STATUS_NONE,
+            'approved_label' => DeclarationService::APPROVED_LABEL,
+            'submitted_at' => now('Asia/Jakarta'),
+            'pdf_path' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('declarations.update', $declaration), [
+            'declaration_status' => ConflictDeclaration::STATUS_HAS_CONFLICT,
+            'categories' => ['family_relationship'],
+            'details' => [[
+                'category_key' => 'family_relationship',
+                'related_party_name' => 'Andi',
+                'situation_explanation' => 'Hubungan saudara kandung di unit yang sama.',
+            ]],
+        ]);
+
+        $declaration->refresh();
+        $response->assertRedirect(route('declarations.show', $declaration));
+        $this->assertSame(ConflictDeclaration::STATUS_HAS_CONFLICT, $declaration->declaration_status);
+        $this->assertSame(1, $declaration->categories()->count());
+        $this->assertSame(1, $declaration->details()->count());
+    }
+
+    public function test_employee_cannot_edit_existing_declaration(): void
     {
         $user = $this->makeUser();
         $this->completeProfileFor($user);
@@ -148,7 +231,7 @@ class StoreDeclarationTest extends TestCase
             'pdf_path' => null,
         ]);
 
-        $response = $this->actingAs($user)->put(route('declarations.update', $declaration), [
+        $response = $this->actingAs($user)->from(route('declarations.show', $declaration))->put(route('declarations.update', $declaration), [
             'declaration_status' => ConflictDeclaration::STATUS_HAS_CONFLICT,
             'categories' => ['family_relationship'],
             'details' => [[
@@ -158,11 +241,9 @@ class StoreDeclarationTest extends TestCase
             ]],
         ]);
 
+        $response->assertForbidden();
         $declaration->refresh();
-        $response->assertRedirect(route('declarations.show', $declaration));
-        $this->assertSame(ConflictDeclaration::STATUS_HAS_CONFLICT, $declaration->declaration_status);
-        $this->assertSame(1, $declaration->categories()->count());
-        $this->assertSame(1, $declaration->details()->count());
+        $this->assertSame(ConflictDeclaration::STATUS_NONE, $declaration->declaration_status);
     }
 
     public function test_valid_has_conflict_persists_category_and_detail(): void

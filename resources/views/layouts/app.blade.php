@@ -58,7 +58,7 @@
                                     <span>Beranda</span>
                                 </a>
                                 <a href="{{ route('admin.data.index') }}"
-                                    class="nav-item {{ request()->routeIs('admin.data.index') ? 'active' : '' }}">
+                                    class="nav-item {{ request()->routeIs('admin.data.index') || request()->routeIs('declarations.show') ? 'active' : '' }}">
                                     <span class="nav-icon">
                                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                             <path

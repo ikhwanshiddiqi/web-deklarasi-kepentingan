@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Data Deklarasi — Admin')
+@section('title', 'Data Deklarasi')
 
 @section('content')
     <div class="mb-6">
@@ -56,8 +56,8 @@
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">No</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Nama</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">NIK</th>
-                    <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Jabatan</th>
-                    <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Unit Kerja</th>
+                    {{-- <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Jabatan</th> --}}
+                    {{-- <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Unit Kerja</th> --}}
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Tanggal</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Aksi</th>
                 </tr>
@@ -68,8 +68,8 @@
                         <td class="px-4 py-3 text-gray-600">{{ $declarations->firstItem() + $loop->index }}</td>
                         <td class="px-4 py-3 text-gray-900">{{ $declaration->employee_name ?? '-' }}</td>
                         <td class="px-4 py-3 text-gray-700">{{ $declaration->employee_nik ?? '-' }}</td>
-                        <td class="px-4 py-3 text-gray-700">{{ $declaration->employee_position ?? '-' }}</td>
-                        <td class="px-4 py-3 text-gray-700">{{ $declaration->employee_work_unit ?? '-' }}</td>
+                        {{-- <td class="px-4 py-3 text-gray-700">{{ $declaration->employee_position ?? '-' }}</td> --}}
+                        {{-- <td class="px-4 py-3 text-gray-700">{{ $declaration->employee_work_unit ?? '-' }}</td> --}}
                         <td class="px-4 py-3 text-gray-600">
                             {{ $declaration->submitted_at?->timezone(config('app.timezone'))->format('d M Y H:i') ?? '-' }}
                         </td>

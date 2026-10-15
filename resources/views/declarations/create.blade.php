@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Isi Form Deklarasi — Portal Pernyataan Potensi Benturan Kepentingan')
+@section('title', 'Isi Form Deklarasi')
 
 @section('content')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
@@ -84,7 +84,9 @@
             <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
                 <h2 class="text-base font-semibold text-gray-900">A. Data Karyawan</h2>
                 <p class="mt-1 text-sm text-gray-600">
-                    Data berikut diambil dari profil akun Anda dan tidak dapat diubah di sini.
+                    {{ $declaration
+                        ? 'Data berikut diambil dari profil karyawan pemilik deklarasi ini dan tidak dapat diubah di sini.'
+                        : 'Data berikut diambil dari profil akun Anda dan tidak dapat diubah di sini.' }}
                 </p>
 
                 <dl class="mt-5 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
@@ -100,20 +102,6 @@
                         <dd data-field="employee_nik"
                             class="mt-1 rounded-md border border-gray-200 bg-gray-100 px-3 py-2.5 text-base text-gray-800">
                             {{ $employee['nik'] }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-700">Jabatan / Posisi</dt>
-                        <dd data-field="employee_position"
-                            class="mt-1 rounded-md border border-gray-200 bg-gray-100 px-3 py-2.5 text-base text-gray-800">
-                            {{ $employee['position'] }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-700">Unit Kerja</dt>
-                        <dd data-field="employee_work_unit"
-                            class="mt-1 rounded-md border border-gray-200 bg-gray-100 px-3 py-2.5 text-base text-gray-800">
-                            {{ $employee['work_unit'] }}
                         </dd>
                     </div>
                 </dl>
@@ -195,23 +183,15 @@
                             C. Tabel Identifikasi dan Deklarasi
                         </h2>
                         <p class="mt-1 text-sm text-gray-600">
-                            Isi rincian untuk setiap kondisi yang relevan. Minimal satu rincian wajib diisi.
+                            Satu rincian muncul otomatis untuk setiap kategori yang Anda pilih. Lengkapi semuanya.
                         </p>
                     </div>
-                    <button type="button" @click="addDetail()"
-                        class="mt-3 inline-flex items-center justify-center gap-1.5 self-start rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:mt-0">
-                        <span aria-hidden="true">+</span> Tambah Rincian
-                    </button>
                 </div>
 
                 @error('details')
                     <p class="mt-3 text-sm text-red-600">{{ $message }}</p>
                 @enderror
 
-                <p class="mt-5 rounded-md border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500"
-                    x-show="details.length === 0">
-                    Belum ada rincian. Klik <span class="font-medium">Tambah Rincian</span> untuk menambahkan.
-                </p>
 
                 <div class="mt-5 space-y-4" x-show="details.length > 0">
                     <template x-for="(detail, index) in details" :key="detail._uid">
@@ -221,24 +201,18 @@
                                     <span
                                         class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
                                         x-text="index + 1"></span>
-                                    <span class="text-sm font-semibold text-gray-700">Rincian</span>
+                                    <span class="text-sm font-semibold text-gray-700"
+                                        x-text="categoryLabel(detail.category_key)"></span>
                                 </div>
-                                <button type="button" @click="removeDetail(index)"
-                                    class="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50">
-                                    Hapus
-                                </button>
                             </div>
 
                             <div class="space-y-4">
                                 <div>
                                     <label class="mb-1 block text-xs font-medium text-gray-600">Kondisi</label>
-                                    <select :name="`details[${index}][category_key]`" x-model="detail.category_key"
-                                        class="block w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                        <option value="">— Pilih kondisi —</option>
-                                        <template x-for="key in categories" :key="key">
-                                            <option :value="key" x-text="categoryLabel(key)"></option>
-                                        </template>
-                                    </select>
+                                    <input type="hidden" :name="`details[${index}][category_key]`"
+                                        :value="detail.category_key">
+                                    <p class="block w-full rounded-md border border-gray-200 bg-gray-100 px-2 py-2 text-sm text-gray-800"
+                                        x-text="categoryLabel(detail.category_key)"></p>
                                 </div>
 
                                 <div>
@@ -323,6 +297,8 @@
                         related_party_name: d.related_party_name ?? '',
                         situation_explanation: d.situation_explanation ?? '',
                     }));
+                    this.syncDetails();
+                    this.$watch('categories', () => this.syncDetails());
                 },
 
                 hasCategories() {
@@ -344,34 +320,53 @@
                         }
                         this.categories = [];
                         this.details = [];
+                    } else if (value === 'has_conflict') {
+                        this.syncDetails();
                     }
+                },
+
+                // Satu rincian per kategori terpilih, selalu mengikuti urutan kategori di Bagian B.
+                // Rincian yang sudah ada (beserta isiannya) dipertahankan; yang kategorinya dicabut dibuang.
+                syncDetails() {
+                    const next = [];
+                    this.categoryKeys.forEach((key) => {
+                        if (!this.categories.includes(key)) return;
+                        const existing = this.details.filter((d) => d.category_key === key);
+                        if (existing.length > 0) {
+                            next.push(...existing);
+                        } else {
+                            next.push({
+                                _uid: this._uidCounter++,
+                                category_key: key,
+                                related_party_name: '',
+                                situation_explanation: '',
+                            });
+                        }
+                    });
+                    const same = next.length === this.details.length && next.every((d, i) => d === this.details[i]);
+                    if (!same) this.details = next;
                 },
 
                 onCategoryToggle(key, checked) {
-                    if (!checked) {
-                        const related = this.details.filter((d) => d.category_key === key);
-                        if (related.length > 0) {
-                            const ok = window.confirm(
-                                'Kategori ini memiliki rincian pada Bagian C. Menghapus centang akan menghapus rincian tersebut. Lanjutkan?'
-                            );
-                            if (!ok) {
-                                if (!this.categories.includes(key)) {
-                                    this.categories.push(key);
-                                }
-                                return;
+                    if (checked) return; // rincian dibuat otomatis oleh syncDetails()
+
+                    const filled = this.details.some((d) =>
+                        d.category_key === key &&
+                        ((d.related_party_name || '').trim() !== '' || (d.situation_explanation || '').trim() !== '')
+                    );
+                    if (filled) {
+                        const ok = window.confirm(
+                            'Rincian untuk kategori ini sudah diisi. Menghapus centang akan menghapus rincian tersebut. Lanjutkan?'
+                        );
+                        if (!ok) {
+                            if (!this.categories.includes(key)) {
+                                this.categories.push(key);
                             }
-                            this.details = this.details.filter((d) => d.category_key !== key);
+                            return;
                         }
                     }
-                },
-
-                addDetail() {
-                    this.details.push({
-                        _uid: this._uidCounter++,
-                        category_key: this.categories.length === 1 ? this.categories[0] : '',
-                        related_party_name: '',
-                        situation_explanation: '',
-                    });
+                    this.categories = this.categories.filter((k) => k !== key);
+                    this.details = this.details.filter((d) => d.category_key !== key);
                 },
 
                 initQuill(editorElement, hiddenField, detail) {
@@ -411,10 +406,6 @@
                         hiddenField.value = html;
                         detail.situation_explanation = html;
                     });
-                },
-
-                removeDetail(index) {
-                    this.details.splice(index, 1);
                 },
             };
         }

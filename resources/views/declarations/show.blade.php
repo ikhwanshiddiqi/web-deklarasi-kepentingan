@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Hasil Deklarasi — Portal Pernyataan Potensi Benturan Kepentingan')
+@section('title', 'Hasil Deklarasi')
 
 @section('content')
     @php
@@ -23,7 +23,7 @@
                 </p>
             </div>
 
-            @if (auth()->check() && auth()->user()->role !== 'admin')
+            @if (auth()->check() && auth()->user()->role == 'admin')
                 <a href="{{ route('declarations.edit', $declaration) }}"
                     class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
                     Edit Jawaban
@@ -69,14 +69,14 @@
                     <dt class="text-xs text-gray-500">NIK</dt>
                     <dd class="mt-1 text-sm text-gray-900">{{ $declaration->employee_nik }}</dd>
                 </div>
-                <div>
+                {{-- <div>
                     <dt class="text-xs text-gray-500">Jabatan/Posisi</dt>
                     <dd class="mt-1 text-sm text-gray-900">{{ $declaration->employee_position }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs text-gray-500">Unit Kerja</dt>
                     <dd class="mt-1 text-sm text-gray-900">{{ $declaration->employee_work_unit }}</dd>
-                </div>
+                </div> --}}
             </dl>
         </section>
 
@@ -84,13 +84,46 @@
             <section class="mb-6 rounded-lg border border-gray-200 bg-white p-5">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Ringkasan</h2>
 
-                <div class="mt-3">
-                    <h3 class="text-xs text-gray-500">Kategori Terpilih</h3>
-                    <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-900">
-                        @foreach ($selectedCategories as $key)
-                            <li>{{ $categories[$key]['label'] ?? $key }}</li>
-                        @endforeach
-                    </ul>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full border-collapse text-left text-sm text-gray-900">
+                        <thead>
+                            <tr class="bg-slate-100 text-xs uppercase tracking-wide text-gray-700">
+                                <th class="border border-gray-200 px-3 py-2">No.</th>
+                                <th class="border border-gray-200 px-3 py-2">Kondisi yang dicentang</th>
+                                <th class="border border-gray-200 px-3 py-2">Nama Pihak Terkait / Perusahaan terafiliasi
+                                </th>
+                                <th class="border border-gray-200 px-3 py-2">Penjelasan situasi / Hubungan terkait</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($declaration->details as $index => $detail)
+                                @php
+                                    $detailKey = $detail->category_key ?? '';
+                                @endphp
+                                <tr class="align-top">
+                                    <td class="border border-gray-200 px-3 py-2 text-center">{{ $index + 1 }}</td>
+                                    <td class="border border-gray-200 px-3 py-2">
+                                        {{ $categories[$detailKey]['label'] ?? $detailKey }}
+                                    </td>
+                                    <td class="border border-gray-200 px-3 py-2">
+                                        {{ $detail->related_party_name ?? '-' }}
+                                    </td>
+                                    <td class="border border-gray-200 px-3 py-2">
+                                        {{-- RichText mengubah daftar Quill jadi <ol>/<ul> asli dan membuang HTML berbahaya --}}
+                                        <div class="[&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5">
+                                            {!! \App\Services\RichTextService::toHtml($detail->situation_explanation) ?: '-' !!}
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="border border-gray-200 px-3 py-4 text-center text-gray-500">
+                                        Belum ada rincian yang diisi.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
 
                 <p class="mt-4 text-sm text-gray-700">

@@ -18,53 +18,50 @@
         return $categoryMap[$key]['label'] ?? $key;
     };
 
-    // Penjelasan: izinkan hanya tag teks dasar, buang semua atribut (style, class, dll).
-    // Kalau input aslinya teks biasa dari <textarea>, ganti dengan: nl2br(e($text))
-    $cleanHtml = static function (?string $html): string {
-        $html = strip_tags((string) $html, '<p><br><b><strong><i><em><u><ul><ol><li>');
-        return preg_replace('/<(\w+)\s+[^>]*>/', '<$1>', $html) ?? '';
+    // Penjelasan (HTML Quill) -> baris teks; daftar jadi "1. ..." / "• ..." lalu dipecah per ~140 karakter
+    // di batas kata agar satu sel bisa berpindah halaman (mPDF tidak memotong <tr>).
+    $explainChunks = static function (?string $html, int $size = 140): array {
+        $lines = \App\Services\RichTextService::toLines($html);
+        if ($lines === []) {
+            return [''];
+        }
+        $out = [];
+        foreach ($lines as $para) {
+            foreach (explode("\n", wordwrap($para, $size, "\n", true)) as $line) {
+                $out[] = $line;
+            }
+        }
+        return $out;
     };
 
-    // Ubah penjelasan jadi teks biasa lalu pecah per ~140 karakter (di batas kata) agar bisa
-    // berpindah halaman di tengah sel.
-    $explainChunks = static function (?string $html, int $size = 140): array {
-    $text = preg_replace('#<\s*(br|/p|/li)\s*/@endphp#i', "\n", (string) $html);
-    $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    $text = trim(preg_replace("/\n{2,}/", "\n", str_replace("\r", '', $text)));
-    if ($text === '') {
-        return [''];
+    // Diisi PdfService: id potongan yang berada di akhir halaman (butuh garis penutup),
+    // dan penanda untuk pass pengukuran halaman.
+    $pageEnds = $pageEnds ?? [];
+    $measure = $measure ?? false;
+    $fallbackBorders = $fallbackBorders ?? false;
+    $chunkNo = 0;
+
+    $submittedAt = $declaration->submitted_at;
+    if ($submittedAt instanceof \Carbon\CarbonInterface) {
+        $tanggal = $submittedAt->copy()->timezone('Asia/Jakarta')->translatedFormat('d F Y');
+    } elseif (!empty($submittedAt)) {
+        $tanggal = \Illuminate\Support\Carbon::parse($submittedAt)->timezone('Asia/Jakarta')->translatedFormat('d F Y');
+    } else {
+        $tanggal = now('Asia/Jakarta')->translatedFormat('d F Y');
     }
-    $out = [];
-    foreach (explode("\n", $text) as $para) {
-        foreach (explode("\n", wordwrap($para, $size, "\n", true)) as $line) {
-            $out[] = $line;
-        }
-    }
-    // gabung baris pendek ke chunk ~$size karakter; paragraf baru tetap mulai baris baru
-    return $out;
-};
 
-$submittedAt = $declaration->submitted_at;
-if ($submittedAt instanceof \Carbon\CarbonInterface) {
-    $tanggal = $submittedAt->copy()->timezone('Asia/Jakarta')->translatedFormat('d F Y');
-} elseif (!empty($submittedAt)) {
-    $tanggal = \Illuminate\Support\Carbon::parse($submittedAt)->timezone('Asia/Jakarta')->translatedFormat('d F Y');
-} else {
-    $tanggal = now('Asia/Jakarta')->translatedFormat('d F Y');
-}
+    $approvedBy = $declaration->employee_name ?: '-';
 
-$approvedBy = $declaration->employee_name ?: '-';
+    $logoPath = public_path('pict/logosp.png');
+    $logoExists = is_file($logoPath);
+@endphp
 
-$logoPath = public_path('pict/logosp.png');
-$logoExists = is_file($logoPath);
-?>
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
     <meta charset="utf-8">
-    <title>Pernyataan Potensi Benturan Kepentingan — FI/SP/GRC/973</title>
-    {{-- Hanya CSS yang didukung mPDF: tanpa @page, position:fixed, display:none, box-sizing, inline-block --}}
+    <title>Pernyataan Benturan Kepentingan</title>
     <style>
         body {
             font-family: freesans, sans-serif;
@@ -203,11 +200,11 @@ $logoExists = is_file($logoPath);
         }
 
         .detail-table .c-party {
-            width: 35%;
+            width: 28%;
         }
 
         .detail-table .c-expl {
-            width: 32%;
+            width: 39%;
         }
 
         .detail-table ul,
@@ -216,12 +213,32 @@ $logoExists = is_file($logoPath);
             padding-left: 14pt;
         }
 
-        /* baris sambungan: tetap bergaris penuh, jadi akhir tiap halaman selalu tertutup garis */
-        .detail-table .g-first,
-        .detail-table .g-mid,
+        /* baris sambungan: tanpa garis horizontal di antara potongan, kecuali di akhir halaman (.pe) */
+        .detail-table .g-first {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .detail-table .g-mid {
+            border-top: 0;
+            border-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
         .detail-table .g-last {
-            padding-top: 1pt;
-            padding-bottom: 1pt;
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        .detail-table .pe {
+            border-bottom: 0.5pt solid #000;
+            padding-bottom: 3pt;
+        }
+
+        .detail-table .fb {
+            border-top: 0.5pt solid #000;
+            border-bottom: 0.5pt solid #000;
         }
 
         .statement {
@@ -270,7 +287,7 @@ $logoExists = is_file($logoPath);
                     <img src="{{ $logoPath }}" alt="PT Semen Padang" style="width:1.5cm;">
                 @endif
             </td>
-            <td class="title-cell">PERNYATAAN POTENSI BENTURAN KEPENTINGAN</td>
+            <td class="title-cell">PERNYATAAN BENTURAN KEPENTINGAN</td>
         </tr>
     </table>
 
@@ -287,30 +304,20 @@ $logoExists = is_file($logoPath);
             <td class="sep">:</td>
             <td class="value">{{ $declaration->employee_nik }}</td>
         </tr>
-        <tr>
-            <td class="label">Jabatan / Posisi</td>
-            <td class="sep">:</td>
-            <td class="value">{{ $declaration->employee_position }}</td>
-        </tr>
-        <tr>
-            <td class="label">Unit Kerja</td>
-            <td class="sep">:</td>
-            <td class="value">{{ $declaration->employee_work_unit }}</td>
-        </tr>
     </table>
 
     {{-- B. DEKLARASI --}}
     <div class="section-title">B.&nbsp; Deklarasi Benturan Kepentingan</div>
     <p class="hint">
-        (Beri tanda centang [X] jika Anda memiliki kondisi dan keadaan yang berpotensi
-        menimbulkan benturan kepentingan sesuai situasi yang relevan dengan Anda)
+        (Beri tanda centang [X] jika Anda memiliki kondisi dan keadaan yang menimbulkan benturan kepentingan sesuai
+        situasi yang relevan dengan Anda)
     </p>
 
     <p class="intro">
         Dengan ini saya menyatakan bahwa saya
         <span style="font-family:dejavusansmono; font-size:10pt;">{!! $mark(!$hasConflict) !!}</span> <b>tidak memiliki</b> /
         <span style="font-family:dejavusansmono; font-size:10pt;">{!! $mark($hasConflict) !!}</span> <b>memiliki</b>
-        kondisi yang berpotensi menimbulkan benturan kepentingan sebagai berikut:
+        kondisi yang menimbulkan benturan kepentingan sebagai berikut:
     </p>
 
     <table class="cat-table">
@@ -375,42 +382,50 @@ $logoExists = is_file($logoPath);
                     $chunks = $explainChunks($explain);
                     $last = count($chunks) - 1;
                 @endphp
-                {{-- mPDF tidak memotong satu <tr> antar halaman, jadi penjelasan panjang dipecah jadi beberapa baris
-                     masing-masing bergaris penuh supaya baris terakhir di tiap halaman tetap tertutup garis. --}}
                 @foreach ($chunks as $i => $chunk)
                     @php
+                        $chunkNo++;
+                        $cid = 'c' . $chunkNo;
                         $pos = $last === 0 ? '' : ($i === 0 ? 'g-first' : ($i === $last ? 'g-last' : 'g-mid'));
+                        if ($fallbackBorders) {
+                            $pos .= ' fb';
+                        } elseif (in_array($cid, $pageEnds, true)) {
+                            $pos .= ' pe';
+                        }
                     @endphp
                     <tr>
                         <td class="c-no {{ $pos }}">{!! $i === 0 ? $index + 1 : '&nbsp;' !!}</td>
                         <td class="c-cond {{ $pos }}">{!! $i === 0 ? e($labelFor($detailKey)) : '&nbsp;' !!}</td>
                         <td class="c-party {{ $pos }}">{!! $i === 0 ? e($party) : '&nbsp;' !!}</td>
-                        <td class="c-expl {{ $pos }}">{!! e($chunk) !!}</td>
+                        <td class="c-expl {{ $pos }}">
+                            @if ($measure)
+                                <bookmark content="{{ $cid }}" level="0" />
+                            @endif{!! e($chunk) !!}
+                        </td>
                     </tr>
                 @endforeach
-            @empty
-                <tr>
-                    <td class="c-no">&nbsp;</td>
-                    <td class="c-cond">&nbsp;</td>
-                    <td class="c-party">&nbsp;</td>
-                    <td class="c-expl">&nbsp;</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+                @empty
+                    <tr>
+                        <td class="c-no">&nbsp;</td>
+                        <td class="c-cond">&nbsp;</td>
+                        <td class="c-party">&nbsp;</td>
+                        <td class="c-expl">&nbsp;</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
 
-    <p class="statement">
-        Saya menyatakan bahwa seluruh informasi ini adalah benar dan lengkap sesuai dengan kondisi
-        yang saya ketahui saat ini, untuk dapat dipergunakan sebagaimana mestinya.
-    </p>
+        <p class="statement">
+            Saya menyatakan bahwa seluruh informasi ini adalah benar dan lengkap sesuai dengan kondisi
+            yang saya ketahui saat ini, untuk dapat dipergunakan sebagaimana mestinya.
+        </p>
 
-    <div class="signoff">
-        <p class="line">Padang, {{ $tanggal }}</p>
-        <p class="line">Dibuat oleh,</p>
-        <div class="approved-word">APPROVED</div>
-        <p class="name-line"><span class="name-under">{{ $approvedBy }}</span></p>
-    </div>
+        <div class="signoff">
+            <p class="line">Padang, {{ $tanggal }}</p>
+            <p class="line">Dibuat oleh,</p>
+            <div class="approved-word">APPROVED</div>
+            <p class="name-line"><span class="name-under">{{ $approvedBy }}</span></p>
+        </div>
+    </body>
 
-</body>
-
-</html>
+    </html>

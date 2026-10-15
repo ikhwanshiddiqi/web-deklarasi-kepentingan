@@ -82,18 +82,18 @@ class DeclarationController extends Controller
 
         $declaration->loadMissing(['categories', 'details']);
 
-        $user = $request->user();
-        $profile = $user->profile;
+        $owner = $declaration->user()->with('profile')->firstOrFail();
+        $profile = $owner->profile;
 
         $employee = [
             'full_name' => $profile?->full_name,
-            'nik' => $user->nik,
+            'nik' => $owner->nik,
             'position' => $profile?->position,
             'work_unit' => $profile?->work_unit,
         ];
 
         return view('declarations.create', [
-            'user' => $user,
+            'user' => $owner,
             'employee' => $employee,
             'categories' => config('conflict_categories', []),
             'declaration' => $declaration,
