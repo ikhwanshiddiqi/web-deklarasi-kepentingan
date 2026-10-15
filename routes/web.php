@@ -105,6 +105,8 @@ Route::middleware(['auth', 'role:admin', 'no-cache'])->group(function () {
     Route::get('/admin/data/export', [AdminUserController::class, 'exportBundle'])
         ->name('admin.data.export');
 
+    Route::get('/admin/data/export-excel', [AdminUserController::class, 'exportExcel'])->name('admin.data.export-excel');
+
     Route::get('/admin/users', [AdminUserController::class, 'index'])
         ->name('admin.users.index');
 

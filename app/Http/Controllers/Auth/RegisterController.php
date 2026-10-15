@@ -79,6 +79,7 @@ class RegisterController extends Controller
         $user = User::create([
             'email' => $email,
             'nik' => (string) $request->validated('nik'),
+            'nip' => (string) $request->validated('nip'),
             'password' => (string) $request->validated('password'),
             'role' => 'employee',
             'is_active' => true,

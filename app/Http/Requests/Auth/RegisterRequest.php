@@ -13,6 +13,7 @@ use Illuminate\Validation\Rules\Password;
  *
  * - Email: wajib, domain `@sig.id`, unik di `users.email` (setelah dinormalkan).
  * - NIK: wajib, tepat 16 digit angka, unik di `users.nik`.
+ * - NIP: wajib, angka saja, unik di `users.nip`.
  * - Password: wajib, dikonfirmasi, minimal 8 karakter mengandung huruf + angka.
  * - Email WAJIB sudah terverifikasi OTP (Req 1.7) — dicek via OtpService::isVerified.
  *
@@ -44,17 +45,28 @@ class RegisterRequest extends FormRequest
     {
         return [
             'email' => [
-                'required', 'string', 'email', 'max:255',
+                'required',
+                'string',
+                'email',
+                'max:255',
                 'regex:/@sig\.id$/i',
                 Rule::unique('users', 'email'),
             ],
             'nik' => [
-                'required', 'string',
+                'required',
+                'string',
                 'regex:/^[0-9]{16}$/',
                 Rule::unique('users', 'nik'),
             ],
+            'nip' => [
+                'required',
+                'string',
+                'digits_between:1,30',
+                Rule::unique('users', 'nip'),
+            ],
             'password' => [
-                'required', 'confirmed',
+                'required',
+                'confirmed',
                 Password::min(8)->letters()->numbers(),
             ],
         ];
@@ -94,6 +106,9 @@ class RegisterRequest extends FormRequest
             'nik.required' => 'NIK wajib diisi.',
             'nik.regex' => 'NIK harus terdiri dari tepat 16 digit angka.',
             'nik.unique' => 'NIK ini tidak dapat digunakan.',
+            'nip.required' => 'NIP wajib diisi.',
+            'nip.digits_between' => 'NIP harus berupa angka dan maksimal 30 digit.',
+            'nip.unique' => 'NIP ini tidak dapat digunakan.',
             'password.required' => 'Password wajib diisi.',
             'password.confirmed' => 'Konfirmasi password tidak cocok.',
             'password.min' => 'Password minimal 8 karakter.',

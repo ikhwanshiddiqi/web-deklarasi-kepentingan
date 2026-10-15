@@ -66,17 +66,11 @@
                     <dd class="mt-1 text-sm text-gray-900">{{ $declaration->employee_name }}</dd>
                 </div>
                 <div>
-                    <dt class="text-xs text-gray-500">NIK</dt>
-                    <dd class="mt-1 text-sm text-gray-900">{{ $declaration->employee_nik }}</dd>
+                    <dt class="text-xs text-gray-500">NIP/NIK</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {{ $declaration->employee_nip ?? '-' }} / {{ $declaration->employee_nik ?? '-' }}
+                    </dd>
                 </div>
-                {{-- <div>
-                    <dt class="text-xs text-gray-500">Jabatan/Posisi</dt>
-                    <dd class="mt-1 text-sm text-gray-900">{{ $declaration->employee_position }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-gray-500">Unit Kerja</dt>
-                    <dd class="mt-1 text-sm text-gray-900">{{ $declaration->employee_work_unit }}</dd>
-                </div> --}}
             </dl>
         </section>
 

@@ -33,6 +33,138 @@
             color: #9ca3af;
             font-style: normal;
         }
+
+        /* Modal konfirmasi simpan (gaya sendiri, tidak bergantung build Tailwind) */
+        .cf-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(17, 24, 39, .55);
+        }
+
+        .cf-dialog {
+            width: 100%;
+            max-width: 28rem;
+            background: #fff;
+            border-radius: .75rem;
+            padding: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .25);
+        }
+
+        .cf-head {
+            display: flex;
+            gap: .75rem;
+            align-items: flex-start;
+        }
+
+        .cf-icon {
+            flex: none;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .cf-icon--ask {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .cf-icon--warn {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .cf-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .cf-text {
+            margin: .35rem 0 0;
+            font-size: .875rem;
+            line-height: 1.5;
+            color: #4b5563;
+        }
+
+        .cf-lock {
+            margin-top: 1rem;
+            padding: .75rem .9rem;
+            border: 1px solid #fde68a;
+            border-radius: .5rem;
+            background: #fffbeb;
+            color: #92400e;
+            font-size: .875rem;
+            line-height: 1.45;
+        }
+
+        .cf-summary {
+            margin: 1rem 0 0;
+            padding: .6rem .9rem;
+            border-radius: .5rem;
+            background: #f3f4f6;
+            font-size: .8125rem;
+            color: #374151;
+        }
+
+        .cf-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: .5rem;
+            margin-top: 1.25rem;
+        }
+
+        .cf-btn {
+            border-radius: .5rem;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            color: #374151;
+            padding: .55rem 1rem;
+            font-size: .875rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .cf-btn:hover {
+            background: #f9fafb;
+        }
+
+        .cf-btn--primary {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+
+        .cf-btn--primary:hover {
+            background: #1d4ed8;
+        }
+
+        .cf-btn--danger {
+            background: #b45309;
+            border-color: #b45309;
+            color: #fff;
+        }
+
+        .cf-btn--danger:hover {
+            background: #92400e;
+        }
+
+        @media (max-width: 480px) {
+            .cf-actions .cf-btn {
+                flex: 1 1 100%;
+            }
+        }
     </style>
 
     <div class="mx-auto w-full max-w-4xl" x-data="declarationForm({
@@ -53,6 +185,7 @@
     ),
 ),
         categoryKeys: @js(array_keys($categories)),
+        isAdmin: @js((bool) auth()->user()?->isAdmin()),
     })" x-cloak>
         <div class="mb-6">
             <h1 class="text-xl font-semibold text-gray-900">Isi Form Deklarasi</h1>
@@ -75,7 +208,7 @@
 
         <form method="POST"
             action="{{ $declaration ? route('declarations.update', $declaration) : route('declarations.store') }}"
-            class="space-y-6" x-ref="form" @submit="submitting = true">
+            class="space-y-6" x-ref="form" @submit.prevent="askConfirm()">
             @csrf
             @if ($declaration)
                 @method('PUT')
@@ -98,10 +231,10 @@
                         </dd>
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-700">NIK</dt>
+                        <dt class="text-sm font-medium text-gray-700">NIP/NIK</dt>
                         <dd data-field="employee_nik"
                             class="mt-1 rounded-md border border-gray-200 bg-gray-100 px-3 py-2.5 text-base text-gray-800">
-                            {{ $employee['nik'] }}
+                            {{ $employee['nip'] ?? '-' }} / {{ $employee['nik'] ?? '-' }}
                         </dd>
                     </div>
                 </dl>
@@ -275,6 +408,47 @@
                 </button>
             </div>
         </form>
+
+        {{-- Modal konfirmasi sebelum menyimpan --}}
+        <div class="cf-backdrop" x-show="confirming" x-cloak x-transition.opacity @click.self="confirming = false"
+            @keydown.escape.window="confirming = false"
+            x-effect="document.body.style.overflow = confirming ? 'hidden' : ''">
+            <div class="cf-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cf-title"
+                aria-describedby="cf-desc">
+                <div class="cf-head">
+                    <div class="cf-icon" :class="isAdmin ? 'cf-icon--ask' : 'cf-icon--warn'" aria-hidden="true"
+                        x-text="isAdmin ? '?' : '!'"></div>
+                    <div>
+                        <h2 id="cf-title" class="cf-title"
+                            x-text="isAdmin ? 'Simpan jawaban deklarasi?' : 'Simpan deklarasi Anda?'"></h2>
+                        <p id="cf-desc" class="cf-text">
+                            <template x-if="isAdmin">
+                                <span>Apakah Anda sudah yakin dengan jawaban yang diisi? Periksa kembali sebelum
+                                    menyimpan.</span>
+                            </template>
+                            <template x-if="!isAdmin">
+                                <span>Periksa kembali seluruh jawaban Anda sebelum menyimpan.</span>
+                            </template>
+                        </p>
+                    </div>
+                </div>
+
+                <p class="cf-summary" x-text="summary()"></p>
+
+                <div class="cf-lock" x-show="!isAdmin">
+                    <strong>Perhatian:</strong> setelah disimpan, jawaban deklarasi
+                    <strong>tidak dapat diubah lagi</strong>. Pastikan semua data sudah benar.
+                </div>
+
+                <div class="cf-actions">
+                    <button type="button" class="cf-btn" x-ref="cancelBtn" @click="confirming = false">
+                        Periksa lagi
+                    </button>
+                    <button type="button" class="cf-btn" :class="isAdmin ? 'cf-btn--primary' : 'cf-btn--danger'"
+                        @click="confirmSubmit()" x-text="isAdmin ? 'Ya, simpan' : 'Ya, simpan permanen'"></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -286,6 +460,8 @@
                 categoryLabels: @js(collect($categories)->map(fn($c) => $c['label'])),
                 details: [],
                 submitting: false,
+                confirming: false,
+                isAdmin: !!initial.isAdmin,
                 _uidCounter: 0,
 
                 init() {
@@ -299,6 +475,31 @@
                     }));
                     this.syncDetails();
                     this.$watch('categories', () => this.syncDetails());
+                },
+
+                summary() {
+                    if (this.status === 'none') {
+                        return 'Status: Tidak memiliki benturan kepentingan.';
+                    }
+                    return 'Status: Memiliki benturan kepentingan \u2014 ' + this.details.length + ' rincian.';
+                },
+
+                askConfirm() {
+                    if (this.submitting) return;
+                    // Belum memilih status: kirim saja agar pesan validasi server muncul
+                    if (!this.status) {
+                        this.submitting = true;
+                        this.$refs.form.submit();
+                        return;
+                    }
+                    this.confirming = true;
+                    this.$nextTick(() => this.$refs.cancelBtn && this.$refs.cancelBtn.focus());
+                },
+
+                confirmSubmit() {
+                    this.confirming = false;
+                    this.submitting = true;
+                    this.$refs.form.submit();
                 },
 
                 hasCategories() {

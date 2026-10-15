@@ -38,6 +38,7 @@ class DeclarationService
                 'user_id' => $user->id,
                 'employee_name' => $profile->full_name,
                 'employee_nik' => $user->nik,
+                'employee_nip' => $user->nip,
                 'employee_position' => $profile->position,
                 'employee_work_unit' => $profile->work_unit,
                 'declaration_status' => $status,

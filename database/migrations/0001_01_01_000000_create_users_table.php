@@ -15,11 +15,10 @@ return new class extends Migration
             $table->id();
             // Email dinormalkan (trim, lowercase) di lapisan aplikasi; di DB cukup unique.
             $table->string('email')->unique();
-            // NIK disimpan sebagai VARCHAR(16) agar leading zero terjaga, bukan integer.
-            $table->string('nik', 16)->unique();
+            $table->string('nik')->unique();
+            $table->string('nip')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            // Role: employee (default) atau admin.
             $table->string('role')->default('employee');
             $table->boolean('is_active')->default(true);
             $table->rememberToken();

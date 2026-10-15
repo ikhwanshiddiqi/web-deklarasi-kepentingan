@@ -213,6 +213,7 @@ class AdminUserTest extends TestCase
             'user_id' => $employee->id,
             'employee_name' => 'Budi Santoso',
             'employee_nik' => '1234567890123456',
+            'employee_nip' => '1980010100000001',
             'employee_position' => 'Analis GRC',
             'employee_work_unit' => 'Unit Tata Kelola',
             'declaration_status' => ConflictDeclaration::STATUS_NONE,

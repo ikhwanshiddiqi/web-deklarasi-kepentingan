@@ -302,7 +302,7 @@
         <tr>
             <td class="label">Nomor Induk Pegawai (NIP/NIK)</td>
             <td class="sep">:</td>
-            <td class="value">{{ $declaration->employee_nik }}</td>
+            <td class="value">{{ $declaration->employee_nip ?? '-' }} / {{ $declaration->employee_nik ?? '-' }}</td>
         </tr>
     </table>
 

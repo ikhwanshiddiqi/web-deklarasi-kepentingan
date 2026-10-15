@@ -36,6 +36,7 @@ class DeclarationController extends Controller
         $employee = [
             'full_name' => $profile?->full_name,
             'nik' => $user->nik,
+            'nip' => $user->nip,
             'position' => $profile?->position,
             'work_unit' => $profile?->work_unit,
         ];
@@ -88,6 +89,7 @@ class DeclarationController extends Controller
         $employee = [
             'full_name' => $profile?->full_name,
             'nik' => $owner->nik,
+            'nip' => $owner->nip,
             'position' => $profile?->position,
             'work_unit' => $profile?->work_unit,
         ];

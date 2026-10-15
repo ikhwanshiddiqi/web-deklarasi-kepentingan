@@ -115,6 +115,7 @@ class StoreDeclarationTest extends TestCase
         $first = $user->declarations()->create([
             'employee_name' => 'Budi Santoso',
             'employee_nik' => $user->nik,
+            'employee_nip' => $user->nip,
             'employee_position' => 'Analis GRC',
             'employee_work_unit' => 'Unit Tata Kelola',
             'declaration_status' => ConflictDeclaration::STATUS_NONE,
@@ -190,6 +191,7 @@ class StoreDeclarationTest extends TestCase
         $declaration = $employee->declarations()->create([
             'employee_name' => 'Budi Santoso',
             'employee_nik' => $employee->nik,
+            'employee_nip' => $employee->nip,
             'employee_position' => 'Analis GRC',
             'employee_work_unit' => 'Unit Tata Kelola',
             'declaration_status' => ConflictDeclaration::STATUS_NONE,
@@ -223,6 +225,7 @@ class StoreDeclarationTest extends TestCase
         $declaration = $user->declarations()->create([
             'employee_name' => 'Budi Santoso',
             'employee_nik' => $user->nik,
+            'employee_nip' => $user->nip,
             'employee_position' => 'Analis GRC',
             'employee_work_unit' => 'Unit Tata Kelola',
             'declaration_status' => ConflictDeclaration::STATUS_NONE,

@@ -73,6 +73,7 @@ class RegistrationTest extends TestCase
         User::create([
             'email' => 'ada@sig.id',
             'nik' => '1111111111111111',
+            'nip' => '1980010100000001',
             'password' => 'Rahasia123',
             'role' => 'employee',
             'is_active' => true,
@@ -122,6 +123,7 @@ class RegistrationTest extends TestCase
         $response = $this->post('/register', [
             'email' => $email,
             'nik' => '1234567890123456',
+            'nip' => '1980050500000005',
             'password' => 'Rahasia123',
             'password_confirmation' => 'Rahasia123',
         ]);
@@ -138,12 +140,33 @@ class RegistrationTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_store_creates_user_with_nip_when_submitted(): void
+    {
+        $email = 'nips@sig.id';
+        $code = $this->sendAndCaptureCode($email);
+        $this->assertTrue(app(OtpService::class)->verify($email, $code));
+
+        $response = $this->post('/register', [
+            'email' => $email,
+            'nik' => '1234567890123456',
+            'nip' => '198765432198765432',
+            'password' => 'Rahasia123',
+            'password_confirmation' => 'Rahasia123',
+        ]);
+
+        $response->assertRedirect();
+
+        $user = User::where('email', $email)->firstOrFail();
+        $this->assertSame('198765432198765432', $user->nip);
+    }
+
     public function test_store_rejected_when_email_not_verified(): void
     {
         // Tidak ada verifikasi OTP untuk email ini.
         $response = $this->from('/register')->post('/register', [
             'email' => 'belum@sig.id',
             'nik' => '2222222222222222',
+            'nip' => '1980060600000006',
             'password' => 'Rahasia123',
             'password_confirmation' => 'Rahasia123',
         ]);
@@ -158,6 +181,7 @@ class RegistrationTest extends TestCase
         User::create([
             'email' => $email,
             'nik' => '3333333333333333',
+            'nip' => '1980030300000003',
             'password' => 'Rahasia123',
             'role' => 'employee',
             'is_active' => true,
@@ -170,6 +194,7 @@ class RegistrationTest extends TestCase
         $response = $this->from('/register')->post('/register', [
             'email' => $email,
             'nik' => '4444444444444444',
+            'nip' => '1980070700000007',
             'password' => 'Rahasia123',
             'password_confirmation' => 'Rahasia123',
         ]);
@@ -183,6 +208,7 @@ class RegistrationTest extends TestCase
         User::create([
             'email' => 'first@sig.id',
             'nik' => $nik,
+            'nip' => '1980040400000004',
             'password' => 'Rahasia123',
             'role' => 'employee',
             'is_active' => true,
@@ -196,6 +222,7 @@ class RegistrationTest extends TestCase
         $response = $this->from('/register')->post('/register', [
             'email' => $email,
             'nik' => $nik,
+            'nip' => '1980080800000008',
             'password' => 'Rahasia123',
             'password_confirmation' => 'Rahasia123',
         ]);
@@ -213,6 +240,7 @@ class RegistrationTest extends TestCase
         $response = $this->from('/register')->post('/register', [
             'email' => $email,
             'nik' => '12345',
+            'nip' => '1980090900000009',
             'password' => 'Rahasia123',
             'password_confirmation' => 'Rahasia123',
         ]);

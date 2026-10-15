@@ -27,6 +27,8 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             // NIK: tepat 16 digit angka (VARCHAR(16), menjaga leading zero).
             'nik' => fake()->unique()->numerify('################'),
+            // NIP: nomor induk pegawai, unik dan berbasis angka.
+            'nip' => fake()->unique()->numerify('##################'),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'role' => 'employee',
@@ -40,7 +42,7 @@ class UserFactory extends Factory
      */
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'email_verified_at' => null,
         ]);
     }

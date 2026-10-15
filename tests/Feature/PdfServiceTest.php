@@ -52,6 +52,7 @@ class PdfServiceTest extends TestCase
         return $user->declarations()->create(array_merge([
             'employee_name' => 'Budi Santoso',
             'employee_nik' => $user->nik,
+            'employee_nip' => $user->nip,
             'employee_position' => 'Analis GRC',
             'employee_work_unit' => 'Unit Tata Kelola',
             'declaration_status' => ConflictDeclaration::STATUS_NONE,

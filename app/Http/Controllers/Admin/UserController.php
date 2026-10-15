@@ -7,6 +7,7 @@ use App\Jobs\GenerateDeclarationBundleExport;
 use App\Models\ConflictDeclaration;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\DeclarationExcelExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -53,27 +54,49 @@ class UserController extends Controller
             $perPage = 10;
         }
 
+        $search = trim((string) $request->query('q', ''));
+
+        $status = $request->query('status');
+        $status = in_array($status, [ConflictDeclaration::STATUS_HAS_CONFLICT, 'none'], true)
+            ? $status
+            : null;
+
         $declarations = ConflictDeclaration::query()
             ->with('user')
+            ->when($search !== '', function ($query) use ($search) {
+                $term = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($search, 'UTF-8'));
+                $like = '%' . $term . '%';
+
+                $query->where(function ($q) use ($like) {
+                    $q->whereRaw("LOWER(employee_name) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereRaw("LOWER(employee_nik) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereHas('user', fn($u) => $u->whereRaw("LOWER(email) LIKE ? ESCAPE '!'", [$like]));
+                });
+            })
+            ->when($status, fn($query) => $query->where('declaration_status', $status))
             ->latest('submitted_at')
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage]);
+            ->withQueryString();
 
         return view('admin.data.index', [
             'declarations' => $declarations,
             'perPage' => $perPage,
+            'search' => $search,
+            'status' => $status,
         ]);
     }
 
     public function exportBundle(Request $request)
     {
-        $selectedIds = $request->query('ids');
+        $ids = collect((array) $request->query('ids', []))
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->take(100)
+            ->values()
+            ->all();
 
-        $ids = is_array($selectedIds)
-            ? array_filter(array_map('intval', $selectedIds))
-            : ConflictDeclaration::query()->pluck('id')->map(fn($id) => (int) $id)->all();
-
-        if (empty($ids)) {
+        if ($ids === []) {
             return redirect()->route('admin.data.index')
                 ->with('error', 'Tidak ada deklarasi yang bisa diekspor.');
         }
@@ -91,6 +114,37 @@ class UserController extends Controller
             'bundle-deklarasi-' . now()->format('Ymd_His') . '.zip',
             ['Content-Type' => 'application/zip'],
         );
+    }
+
+    private function declarationsQuery(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        $search = trim((string) $request->query('q', ''));
+        $status = $request->query('status');
+        $status = in_array($status, [ConflictDeclaration::STATUS_HAS_CONFLICT, 'none'], true) ? $status : null;
+
+        return ConflictDeclaration::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $term = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($search, 'UTF-8'));
+                $like = '%' . $term . '%';
+
+                $query->where(function ($q) use ($like) {
+                    $q->whereRaw("LOWER(employee_name) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereRaw("LOWER(employee_nik) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereHas('user', fn($u) => $u->whereRaw("LOWER(email) LIKE ? ESCAPE '!'", [$like]));
+                });
+            })
+            ->when($status, fn($query) => $query->where('declaration_status', $status))
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id');
+    }
+
+    public function exportExcel(DeclarationExcelExport $export)
+    {
+        $path = $export->build();
+
+        return response()
+            ->download($path, 'data-deklarasi-' . now('Asia/Jakarta')->format('Ymd_His') . '.xlsx')
+            ->deleteFileAfterSend(true);
     }
 
     public function updateStatus(Request $request, User $user): RedirectResponse

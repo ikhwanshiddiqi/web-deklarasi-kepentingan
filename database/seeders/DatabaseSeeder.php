@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $this->seedUser(
             email: 'admin@sig.id',
             nik: '1000000000000001',
+            nip: '1980010100000001',
             password: 'password123',
             role: 'admin',
             fullName: 'Administrator Portal',
@@ -31,6 +32,7 @@ class DatabaseSeeder extends Seeder
         $this->seedUser(
             email: 'karyawan@sig.id',
             nik: '2000000000000002',
+            nip: '1980020200000002',
             password: 'password123',
             role: 'employee',
             fullName: 'Budi Santoso',
@@ -42,6 +44,7 @@ class DatabaseSeeder extends Seeder
     private function seedUser(
         string $email,
         string $nik,
+        string $nip,
         string $password,
         string $role,
         string $fullName,
@@ -52,6 +55,7 @@ class DatabaseSeeder extends Seeder
             ['email' => $email],
             [
                 'nik' => $nik,
+                'nip' => $nip,
                 'password' => Hash::make($password),
                 'role' => $role,
                 'is_active' => true,

@@ -33,6 +33,7 @@ class ConflictDeclaration extends Model
         'user_id',
         'employee_name',
         'employee_nik',
+        'employee_nip',
         'employee_position',
         'employee_work_unit',
         'declaration_status',

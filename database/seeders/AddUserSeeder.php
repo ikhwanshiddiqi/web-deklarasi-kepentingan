@@ -15,6 +15,7 @@ class AddUserSeeder extends Seeder
         $this->seedUser(
             email: 'karyawan1@sig.id',
             nik: '2000000000000001',
+            nip: '1980030300000001',
             password: 'password123',
             role: 'employee',
             fullName: 'Putra Jaya',
@@ -24,6 +25,7 @@ class AddUserSeeder extends Seeder
         $this->seedUser(
             email: 'karyawan2@sig.id',
             nik: '2000000000000003',
+            nip: '1980040400000002',
             password: 'password123',
             role: 'employee',
             fullName: 'Ani Permata',
@@ -35,6 +37,7 @@ class AddUserSeeder extends Seeder
     private function seedUser(
         string $email,
         string $nik,
+        string $nip,
         string $password,
         string $role,
         string $fullName,
@@ -45,6 +48,7 @@ class AddUserSeeder extends Seeder
             ['email' => $email],
             [
                 'nik' => $nik,
+                'nip' => $nip,
                 'password' => Hash::make($password),
                 'role' => $role,
                 'is_active' => true,

@@ -23,7 +23,8 @@ return new class extends Migration
             // Snapshot identitas karyawan saat deklarasi dibuat (Requirement 4.12).
             $table->string('employee_name');
             // NIK snapshot; VARCHAR(16) agar leading zero terjaga.
-            $table->string('employee_nik', 16);
+            $table->string('employee_nip');
+            $table->string('employee_nik');
             $table->string('employee_position');
             $table->string('employee_work_unit');
             // Status deklarasi: none | has_conflict (Requirement 4.2 / 4.11).
