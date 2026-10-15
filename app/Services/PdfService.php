@@ -6,7 +6,7 @@ use App\Models\ConflictDeclaration;
 use Illuminate\Support\Facades\Cache;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
-use App\Services\RichTextService;
+use App\Services\RichTextService as RichText;
 
 /**
  * Layanan pembuatan PDF deklarasi benturan kepentingan.
@@ -39,8 +39,14 @@ class PdfService
 
         $data = ['pageEnds' => [], 'measure' => false, 'fallbackBorders' => false];
 
-        if ($this->hasSplitRows($declaration)) {
-            $ends = $this->detectPageEnds($declaration);
+        try {
+            $data['chunkData'] = $this->buildChunks($declaration);
+        } catch (\Throwable) {
+            // tanpa data ukur, template memakai pemecahan sederhana
+        }
+
+        if ($this->hasSplitRows($declaration, $data['chunkData'] ?? null)) {
+            $ends = $this->detectPageEnds($declaration, ['chunkData' => $data['chunkData'] ?? null]);
             if ($ends === null) {
                 // Pengukuran tidak tersedia: beri garis di semua potongan (aman, hanya kurang rapi).
                 $data['fallbackBorders'] = true;
@@ -59,19 +65,14 @@ class PdfService
         return $pdf->Output('', Destination::STRING_RETURN);
     }
 
-    private function render(ConflictDeclaration $declaration, array $data): Mpdf
+    private function newMpdf(): Mpdf
     {
-        $html = view('pdf.declaration', [
-            'declaration' => $declaration,
-            'categories' => config('conflict_categories', []),
-        ] + $data)->render();
-
         $tempDirectory = storage_path('framework/cache/mpdf');
         if (! is_dir($tempDirectory)) {
             mkdir($tempDirectory, 0777, true);
         }
 
-        $pdf = new Mpdf([
+        return new Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4',
             'default_font' => 'freesans',
@@ -83,17 +84,91 @@ class PdfService
             'margin_footer' => 12.5,
             'tempDir' => $tempDirectory,
         ]);
+    }
+
+    /** Lebar isi sel "Penjelasan" (mm): 39% dari 170 mm area cetak, dikurangi padding & margin aman. */
+    private const EXPLAIN_WIDTH_MM = 61.0;
+
+    /** Jumlah baris tampil per potongan (makin kecil makin halus mengisi halaman). */
+    private const LINES_PER_CHUNK = 3;
+
+    /**
+     * Susun penjelasan jadi baris-baris yang sudah dipatahkan sesuai lebar kolom (pakai metrik font mPDF),
+     * lalu kelompokkan per LINES_PER_CHUNK baris. Dengan begitu tiap potongan berisi baris penuh dan tidak
+     * ada sisa kata menggantung di ujung potongan. Item daftar diberi indentasi gantung.
+     *
+     * @return array<int, list<string>> indeks rincian => daftar potongan (baris dipisah "\n")
+     */
+    private function buildChunks(ConflictDeclaration $declaration): array
+    {
+        $m = $this->newMpdf();
+        $m->AddPage();
+        $m->SetFont('freesans', '', 11);
+
+        $nbsp = "\u{00A0}";
+        $width = fn(string $t): float => (float) $m->GetStringWidth($t);
+
+        $result = [];
+        foreach ($declaration->details->values() as $i => $detail) {
+            $visual = [];
+            foreach (RichText::toLines($detail->situation_explanation ?? '') as $para) {
+                $indent = '';
+                if (preg_match('/^(\d+\.|•)\s/u', $para, $mm)) {
+                    $indent = str_repeat($nbsp, mb_strlen($mm[1]) + 2);
+                    $para = $mm[1] . $nbsp . mb_substr($para, mb_strlen($mm[1]) + 1);
+                }
+
+                $line = '';
+                foreach (preg_split('/\s+/u', trim($para), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
+                    $try = $line === '' ? $word : $line . ' ' . $word;
+                    if ($line !== '' && $width($try) > self::EXPLAIN_WIDTH_MM) {
+                        $visual[] = $line;
+                        $line = $indent . $word;
+                    } else {
+                        $line = $try;
+                    }
+                }
+                $visual[] = $line;
+            }
+
+            $result[$i] = array_map(
+                fn(array $g) => implode("\n", $g),
+                array_chunk($visual ?: [''], self::LINES_PER_CHUNK)
+            );
+        }
+
+        return $result;
+    }
+
+    private function render(ConflictDeclaration $declaration, array $data): Mpdf
+    {
+        $html = view('pdf.declaration', [
+            'declaration' => $declaration,
+            'categories' => config('conflict_categories', []),
+        ] + $data)->render();
+
+        $pdf = $this->newMpdf();
 
         $pdf->WriteHTML($html);
 
         return $pdf;
     }
 
-    /** Ada penjelasan yang terpecah jadi >1 potongan baris? (aturan sama dengan template) */
-    private function hasSplitRows(ConflictDeclaration $declaration): bool
+    /** Ada penjelasan yang terpecah jadi >1 potongan baris? */
+    private function hasSplitRows(ConflictDeclaration $declaration, ?array $chunkData): bool
     {
+        if ($chunkData !== null) {
+            foreach ($chunkData as $chunks) {
+                if (count($chunks) > 1) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         foreach ($declaration->details as $detail) {
-            $lines = RichTextService::toLines($detail->situation_explanation ?? '');
+            $lines = RichText::toLines($detail->situation_explanation ?? '');
             if (count($lines) > 1 || (isset($lines[0]) && mb_strlen($lines[0]) > 140)) {
                 return true;
             }
@@ -109,10 +184,10 @@ class PdfService
      *
      * @return list<string>|null
      */
-    private function detectPageEnds(ConflictDeclaration $declaration): ?array
+    private function detectPageEnds(ConflictDeclaration $declaration, array $extra = []): ?array
     {
         try {
-            $pdf = $this->render($declaration, ['pageEnds' => [], 'measure' => true, 'fallbackBorders' => false]);
+            $pdf = $this->render($declaration, ['pageEnds' => [], 'measure' => true, 'fallbackBorders' => false] + $extra);
         } catch (\Throwable) {
             return null;
         }

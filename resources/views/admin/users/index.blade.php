@@ -56,7 +56,6 @@
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">NIK</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Role</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                    <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Dibuat</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Aksi</th>
                 </tr>
             </thead>
@@ -81,9 +80,6 @@
                                     Nonaktif
                                 </span>
                             @endif
-                        </td>
-                        <td class="px-4 py-3 text-gray-600">
-                            {{ $user->created_at?->timezone(config('app.timezone'))->format('d M Y H:i') }}
                         </td>
                         <td class="px-4 py-3">
                             @if ($user->id === auth()->id())

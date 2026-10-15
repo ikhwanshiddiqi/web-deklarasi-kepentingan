@@ -39,6 +39,7 @@
     $pageEnds = $pageEnds ?? [];
     $measure = $measure ?? false;
     $fallbackBorders = $fallbackBorders ?? false;
+    $chunkData = $chunkData ?? null;
     $chunkNo = 0;
 
     $submittedAt = $declaration->submitted_at;
@@ -55,7 +56,6 @@
     $logoPath = public_path('pict/logosp.png');
     $logoExists = is_file($logoPath);
 @endphp
-
 <!DOCTYPE html>
 <html lang="id">
 
@@ -379,7 +379,7 @@
                     $explain = is_array($detail)
                         ? $detail['situation_explanation'] ?? ''
                         : $detail->situation_explanation ?? '';
-                    $chunks = $explainChunks($explain);
+                    $chunks = $chunkData[$index] ?? $explainChunks($explain);
                     $last = count($chunks) - 1;
                 @endphp
                 @foreach ($chunks as $i => $chunk)
@@ -400,7 +400,7 @@
                         <td class="c-expl {{ $pos }}">
                             @if ($measure)
                                 <bookmark content="{{ $cid }}" level="0" />
-                            @endif{!! e($chunk) !!}
+                            @endif{!! nl2br(e($chunk)) !!}
                         </td>
                     </tr>
                 @endforeach
@@ -426,6 +426,7 @@
             <div class="approved-word">APPROVED</div>
             <p class="name-line"><span class="name-under">{{ $approvedBy }}</span></p>
         </div>
+
     </body>
 
     </html>
