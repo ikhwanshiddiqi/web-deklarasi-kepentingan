@@ -20,7 +20,7 @@
                     Portal Pernyataan Potensi Benturan Kepentingan
                 </h1>
                 <p class="mb-6 text-center text-sm text-gray-600">
-                    Masuk menggunakan email perusahaan atau NIK Anda.
+                    Masuk menggunakan email perusahaan atau NIP Anda.
                 </p>
 
                 <form method="POST" action="{{ route('login.attempt') }}" class="space-y-4" x-data="{ submitting: false }"
@@ -29,7 +29,7 @@
 
                     <div>
                         <label for="identity" class="mb-1 block text-sm font-medium text-gray-700">
-                            Email perusahaan atau NIK
+                            Email perusahaan atau NIP
                         </label>
                         <input id="identity" name="identity" type="text" value="{{ old('identity') }}"
                             autocomplete="username" inputmode="text" required autofocus
