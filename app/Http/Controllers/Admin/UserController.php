@@ -20,28 +20,38 @@ class UserController extends Controller
         private readonly AuditService $auditService,
     ) {}
 
-    /**
-     * Tampilkan daftar akun (paginasi).
-     *
-     * Menampilkan email, NIK, role, status aktif, dan tanggal dibuat.
-     */
     public function index(Request $request): View
     {
         $perPage = (int) $request->query('per_page', 10);
-        $allowedPerPage = [10, 25, 50, 100];
-
-        if (! in_array($perPage, $allowedPerPage, true)) {
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 10;
         }
 
+        $search = trim((string) $request->query('q', ''));
+
         $users = User::query()
+            ->with('profile')
+            ->when($search !== '', function ($query) use ($search) {
+                // '!' sebagai karakter escape; bandingkan dalam huruf kecil (tidak peka huruf besar/kecil)
+                $term = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($search, 'UTF-8'));
+                $like = '%' . $term . '%';
+
+                $query->where(function ($q) use ($like) {
+                    $q->whereRaw("LOWER(email) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereRaw("LOWER(nik) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereRaw("LOWER(nip) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereHas('profile', fn($p) => $p->whereRaw("LOWER(full_name) LIKE ? ESCAPE '!'", [$like]));
+                });
+            })
             ->orderBy('created_at', 'desc')
+            ->orderByDesc('id')
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage]);
+            ->withQueryString();
 
         return view('admin.users.index', [
             'users' => $users,
             'perPage' => $perPage,
+            'search' => $search,
         ]);
     }
 

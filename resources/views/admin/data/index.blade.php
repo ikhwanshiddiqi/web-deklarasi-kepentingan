@@ -197,7 +197,7 @@
                                 d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
                         </svg>
                         <input type="search" id="q" name="q" value="{{ $search }}"
-                            placeholder="Nama, NIK, atau email" autocomplete="off" class="dd-input">
+                            placeholder="Nama, NIK, NIP, atau email" autocomplete="off" class="dd-input">
                     </div>
                 </div>
 
@@ -275,10 +275,8 @@
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">No</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Nama</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">NIK</th>
-                    <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Email</th>
+                    <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">NIP</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                    {{-- <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Jabatan</th> --}}
-                    {{-- <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Unit Kerja</th> --}}
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Tanggal</th>
                     <th scope="col" class="px-4 py-3 text-left font-medium text-gray-600">Aksi</th>
                 </tr>
@@ -289,7 +287,7 @@
                         <td class="px-4 py-3 text-gray-600">{{ $declarations->firstItem() + $loop->index }}</td>
                         <td class="px-4 py-3 text-gray-900">{{ $declaration->employee_name ?? '-' }}</td>
                         <td class="px-4 py-3 text-gray-700">{{ $declaration->employee_nik ?? '-' }}</td>
-                        <td class="px-4 py-3 text-gray-700">{{ $declaration->user?->email ?? '-' }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ $declaration->employee_nip ?? '-' }}</td>
                         <td class="px-4 py-3">
                             @if ($declaration->declaration_status === \App\Models\ConflictDeclaration::STATUS_HAS_CONFLICT)
                                 <span
