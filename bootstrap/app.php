@@ -11,12 +11,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Alias middleware kustom (Laravel 11).
-        // profile.complete: menjaga route form deklarasi agar hanya dapat
-        // diakses user dengan profil lengkap (Req 3.4).
-        // role: membatasi akses berdasarkan role, mis. role:admin (Req 8.3).
-        // no-cache: mencegah browser cache halaman sensitif serta back-button
-        // menampilkan halaman yang sudah logout (Req keamanan sesi browser).
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'profile.complete' => \App\Http\Middleware\EnsureProfileComplete::class,
             'role' => \App\Http\Middleware\EnsureRole::class,
