@@ -11,23 +11,16 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-/**
- * Export Excel seluruh pengguna (kecuali admin), termasuk yang belum mengisi deklarasi.
- *
- * Template: header di baris 4 (A-L), data mulai baris 5. Satu baris per rincian; data karyawan
- * diulang di tiap baris (tanpa merge) agar bisa difilter. Pengguna yang belum mengisi mendapat
- * satu baris dengan Status Pengisian "Belum Mengisi".
- */
 class DeclarationExcelExport
 {
     private const FIRST_ROW = 5;
 
-    public const TEMPLATE = 'templates/template_excel.xlsx'; // relatif ke storage/app
+    public const TEMPLATE = 'templates/template_excel.xlsx';
 
     /** @return string path file .xlsx sementara */
     public function build(): string
     {
-        $book = IOFactory::load(storage_path('app/' . self::TEMPLATE));
+        $book = IOFactory::load(resource_path(self::TEMPLATE));
         $sheet = $book->getActiveSheet();
         $labels = collect(config('conflict_categories', []))->map(fn($c) => $c['label'] ?? null)->all();
 
