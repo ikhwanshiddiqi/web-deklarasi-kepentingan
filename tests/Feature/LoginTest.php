@@ -62,7 +62,7 @@ class LoginTest extends TestCase
 
         $response->assertOk();
         // Judul portal sesuai design.md 5.1 (Req 2.1).
-        $response->assertSee('Portal Pernyataan Potensi Benturan Kepentingan');
+        $response->assertSee('Portal Pernyataan Benturan Kepentingan');
         // Label field identitas tunggal email/NIK (Req 2.1, 2.2).
         $response->assertSee('Email perusahaan atau NIK');
     }

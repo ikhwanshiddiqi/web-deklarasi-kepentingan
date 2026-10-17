@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Setting Akun — Portal Pernyataan Potensi Benturan Kepentingan')
+@section('title', 'Setting Akun')
 
 @section('content')
     <div class="mx-auto w-full max-w-2xl">

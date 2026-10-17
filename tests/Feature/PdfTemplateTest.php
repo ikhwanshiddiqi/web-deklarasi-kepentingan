@@ -77,7 +77,7 @@ class PdfTemplateTest extends TestCase
         $html = $this->render($declaration);
 
         // Judul formulir resmi.
-        $this->assertStringContainsString('PERNYATAAN POTENSI BENTURAN KEPENTINGAN', $html);
+        $this->assertStringContainsString('PERNYATAAN BENTURAN KEPENTINGAN', $html);
         // Kode dokumen + revisi (footer & header).
         $this->assertStringContainsString('FI/SP/GRC/973', $html);
         $this->assertStringContainsString('Rev. 01', $html);

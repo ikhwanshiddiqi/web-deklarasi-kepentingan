@@ -81,7 +81,7 @@ class DeclarationShowPdfTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Hasil Deklarasi');
-        $response->assertSee('Tidak memiliki potensi benturan kepentingan');
+        $response->assertSee('Tidak memiliki benturan kepentingan');
         $response->assertSee('Unduh PDF');
         $response->assertSee(route('declarations.pdf', $declaration));
         $response->assertSee(route('declarations.preview', $declaration));

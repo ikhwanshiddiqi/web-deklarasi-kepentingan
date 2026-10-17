@@ -10,7 +10,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Tabel deklarasi potensi benturan kepentingan. Menyimpan snapshot data
+     * Tabel deklarasi benturan kepentingan. Menyimpan snapshot data
      * karyawan agar PDF historis tidak berubah (Requirement 4.12), status
      * deklarasi, dan metadata submit/PDF. FK + index sesuai Requirement 9.4.
      */

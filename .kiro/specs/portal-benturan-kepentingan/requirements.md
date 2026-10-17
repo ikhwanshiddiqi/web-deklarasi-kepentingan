@@ -1,4 +1,4 @@
-# Requirements — Portal Pernyataan Potensi Benturan Kepentingan
+# Requirements — Portal Pernyataan Benturan Kepentingan
 
 **Kode formulir:** FI/SP/GRC/973 — Rev. 01
 **Bahasa antarmuka:** Bahasa Indonesia
@@ -6,7 +6,7 @@
 
 ## Pendahuluan
 
-Portal internal untuk karyawan PT Semen Padang (domain email `@sig.id`) membuat akun, verifikasi email dengan OTP, login (email atau NIK), melengkapi profil, mengisi pernyataan potensi benturan kepentingan, dan menghasilkan PDF sesuai format formulir resmi. Versi awal memakai database mandiri (PostgreSQL). Konversi PDF memakai template HTML/CSS A4 yang dirender dengan Dompdf (karena LibreOffice tidak tersedia pada lingkungan ini).
+Portal internal untuk karyawan PT Semen Padang (domain email `@sig.id`) membuat akun, verifikasi email dengan OTP, login (email atau NIK), melengkapi profil, mengisi pernyataan benturan kepentingan, dan menghasilkan PDF sesuai format formulir resmi. Versi awal memakai database mandiri (PostgreSQL). Konversi PDF memakai template HTML/CSS A4 yang dirender dengan Dompdf (karena LibreOffice tidak tersedia pada lingkungan ini).
 
 ## Keputusan Teknologi (dikonfirmasi)
 

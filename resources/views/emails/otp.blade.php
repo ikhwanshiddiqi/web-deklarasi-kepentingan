@@ -12,7 +12,7 @@
                 <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
                     <tr>
                         <td style="background-color:#1d4ed8;padding:20px 24px;">
-                            <h1 style="margin:0;font-size:18px;color:#ffffff;">Portal Pernyataan Potensi Benturan Kepentingan</h1>
+                            <h1 style="margin:0;font-size:18px;color:#ffffff;">Portal Pernyataan Benturan Kepentingan</h1>
                         </td>
                     </tr>
                     <tr>

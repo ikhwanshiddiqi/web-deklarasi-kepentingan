@@ -39,9 +39,9 @@
                     <dd class="mt-1 text-sm font-medium text-gray-900"
                         data-declaration-status="{{ $declaration->declaration_status }}">
                         @if ($isHasConflict)
-                            Memiliki potensi benturan kepentingan
+                            Memiliki benturan kepentingan
                         @else
-                            Tidak memiliki potensi benturan kepentingan
+                            Tidak memiliki benturan kepentingan
                         @endif
                     </dd>
                 </div>

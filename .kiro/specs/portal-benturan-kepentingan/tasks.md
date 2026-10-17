@@ -1,8 +1,8 @@
-# Implementation Plan — Portal Pernyataan Potensi Benturan Kepentingan
+# Implementation Plan — Portal Pernyataan Benturan Kepentingan
 
 ## Overview
 
-Rencana implementasi portal pernyataan potensi benturan kepentingan berbasis Laravel 11 (PHP 8.4), Blade + Tailwind + Alpine.js, PostgreSQL, dan PDF via Dompdf. Task disusun bertahap: scaffold → database → registrasi OTP → auth → profil → form deklarasi → PDF → admin → finalisasi. Setiap task implementasi disertai validasi server dan pengujian otomatis.
+Rencana implementasi portal pernyataan benturan kepentingan berbasis Laravel 11 (PHP 8.4), Blade + Tailwind + Alpine.js, PostgreSQL, dan PDF via Dompdf. Task disusun bertahap: scaffold → database → registrasi OTP → auth → profil → form deklarasi → PDF → admin → finalisasi. Setiap task implementasi disertai validasi server dan pengujian otomatis.
 
 ## Task Dependency Graph
 

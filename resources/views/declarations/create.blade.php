@@ -190,7 +190,7 @@
         <div class="mb-6">
             <h1 class="text-xl font-semibold text-gray-900">Isi Form Deklarasi</h1>
             <p class="mt-1 text-sm text-gray-600">
-                Lengkapi pernyataan potensi benturan kepentingan Anda sesuai formulir resmi
+                Lengkapi pernyataan benturan kepentingan Anda sesuai formulir resmi
                 (FI/SP/GRC/973 &mdash; Rev. 01).
             </p>
         </div>
@@ -262,7 +262,7 @@
                         <span>
                             <span class="block text-sm font-medium text-gray-900">Tidak memiliki</span>
                             <span class="block text-sm text-gray-600">
-                                Tidak memiliki kondisi yang berpotensi menimbulkan benturan kepentingan.
+                                Tidak memiliki kondisi yang bermenimbulkan benturan kepentingan.
                             </span>
                         </span>
                     </label>
@@ -276,7 +276,7 @@
                         <span>
                             <span class="block text-sm font-medium text-gray-900">Memiliki</span>
                             <span class="block text-sm text-gray-600">
-                                Memiliki kondisi yang berpotensi menimbulkan benturan kepentingan.
+                                Memiliki kondisi yang bermenimbulkan benturan kepentingan.
                             </span>
                         </span>
                     </label>

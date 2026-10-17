@@ -2,7 +2,7 @@
 
 /*
 |--------------------------------------------------------------------------
-| Kategori Potensi Benturan Kepentingan
+| Kategori Benturan Kepentingan
 |--------------------------------------------------------------------------
 |
 | Lima kategori tetap untuk Bagian B formulir FI/SP/GRC/973. Key digunakan

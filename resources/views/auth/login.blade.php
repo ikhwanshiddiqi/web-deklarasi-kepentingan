@@ -17,7 +17,7 @@
                 </div>
 
                 <h1 class="mb-1 text-center text-lg font-semibold leading-snug text-gray-900">
-                    Portal Pernyataan Potensi Benturan Kepentingan
+                    Portal Pernyataan Benturan Kepentingan
                 </h1>
                 <p class="mb-6 text-center text-sm text-gray-600">
                     Masuk menggunakan email perusahaan atau NIP Anda.

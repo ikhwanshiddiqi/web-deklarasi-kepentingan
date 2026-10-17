@@ -1,4 +1,4 @@
-# Design — Portal Pernyataan Potensi Benturan Kepentingan
+# Design — Portal Pernyataan Benturan Kepentingan
 
 **Kode formulir:** FI/SP/GRC/973 — Rev. 01
 **Acuan:** `design.md` di root workspace (dokumen produk lengkap).
